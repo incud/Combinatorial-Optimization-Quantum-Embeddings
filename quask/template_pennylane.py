@@ -5,16 +5,27 @@ See https://pennylane.readthedocs.io/en/stable/introduction/templates.html for d
 
 
 import jax
+from jax.config import config
+
+import quask.metrics
+
+config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import pennylane as qml
 import numpy as np
 import optax
+import pygad
 from .metrics import (
     calculate_kernel_target_alignment,
     calculate_generalization_accuracy,
     calculate_geometric_difference,
     calculate_model_complexity,
 )
+from scipy.linalg import expm
+import bisect
+import matplotlib.pyplot as plt
+from datetime import datetime
+
 
 
 def rx_embedding(x, wires):
@@ -205,8 +216,7 @@ def projected_xyz_embedding(embedding, X):
     device = qml.device("default.qubit.jax", wires=N)
 
     # define the circuit for the quantum kernel ("overlap test" circuit)
-    @jax.jit
-    @qml.qnode(device)
+    @qml.qnode(device, interface='jax')
     def proj_feature_map(x):
         embedding(x, wires=range(N))
         return (
@@ -216,7 +226,7 @@ def projected_xyz_embedding(embedding, X):
         )
 
     # build the gram matrix
-    X_proj = [proj_feature_map(x) for x in X]
+    X_proj = np.array([proj_feature_map(x) for x in X])
 
     return X_proj
 
@@ -241,25 +251,28 @@ def pennylane_quantum_kernel(feature_map, X_1, X_2=None):
     N = X_1.shape[1]
 
     # create device using JAX
-    device = qml.device("default.qubit.jax", wires=N)
+    def get_kernel_value(x1, x2):
+        device = qml.device("default.qubit.jax", wires=N)
 
-    # create projector (measures probability of having all "00...0")
-    projector = np.zeros((2**N, 2**N))
-    projector[0, 0] = 1
+        # create projector (measures probability of having all "00...0")
+        projector = np.zeros((2**N, 2**N))
+        projector[0, 0] = 1
 
-    # define the circuit for the quantum kernel ("overlap test" circuit)
-    @jax.jit
-    @qml.qnode(device)
-    def kernel(x1, x2):
-        feature_map(x1, wires=range(N))
-        qml.adjoint(feature_map)(x2, wires=range(N))
-        return qml.expval(qml.Hermitian(projector, wires=range(N)))
+        # define the circuit for the quantum kernel ("overlap test" circuit)
+        @qml.qnode(device, interface='jax')
+        def kernel():
+            feature_map(x1, wires=range(N))
+            qml.adjoint(feature_map)(x2, wires=range(N))
+            return qml.expval(qml.Hermitian(projector, wires=range(N)))
+
+        return kernel()
 
     # build the gram matrix
     gram = np.zeros(shape=(X_1.shape[0], X_2.shape[0]))
     for i in range(X_1.shape[0]):
         for j in range(i, X_2.shape[0]):
-            gram[i][j] = kernel(X_1[i], X_2[j])
+            value = get_kernel_value(X_1[i], X_2[j])
+            gram[i][j] = value
             gram[j][i] = gram[i][j]
 
     return gram
@@ -555,3 +568,151 @@ class PennylaneTrainableKernel:
         training_gram = self.get_gram_matrix(self.X_train, self.X_train, self.params)
         testing_gram = self.get_gram_matrix(self.X_test, self.X_train, self.params)
         return training_gram, testing_gram
+
+
+class GeneticEmbedding:
+
+    sigma_x = np.array([[0, 1], [1, 0]])
+    sigma_y = np.array([[0, -1j], [1j, 0]])
+    sigma_z = np.array([[1, 0], [0, -1]])
+    sigma_id = np.eye(2)
+    PAULIS = [sigma_id, sigma_x, sigma_y, sigma_z]
+    N_PAULIS = 4
+
+    def __init__(self, X, y, n_qubits, layers, bandwidth=1.0,
+                 num_generations=50,
+                 num_parents_mating=4,
+                 solution_per_population=4,
+                 parent_selection_type="sss",
+                 crossover_type="single_point",
+                 mutation_type="random",
+                 mutation_percent_genes=10):
+        self.X = X
+        self.y = y
+        self.n_features = len(X[0])
+        self.operations = self.create_operations()
+        self.range_operation = len(self.operations)
+        self.range_gene = self.N_PAULIS * self.N_PAULIS * len(self.operations)
+        self.bandwidth = bandwidth
+        self.n_qubits = n_qubits
+        self.layers = layers
+        self.num_generations = num_generations
+        self.num_parents_mating = num_parents_mating
+        self.solution_per_population = solution_per_population
+        self.ga = pygad.GA(
+            fitness_func=lambda sol, sol_idx: self.fitness(sol, sol_idx),
+            num_genes=self.get_genes(),
+            gene_type=int,
+            gene_space=range(self.get_range_gene()),
+            init_range_low=0,
+            init_range_high=self.get_range_gene() - 1,
+            num_generations=self.num_generations,
+            num_parents_mating=self.num_parents_mating,
+            sol_per_pop=self.solution_per_population,
+            parent_selection_type=parent_selection_type,
+            keep_parents=-1,
+            crossover_type=crossover_type,
+            mutation_type=mutation_type,
+            mutation_percent_genes=mutation_percent_genes,
+            save_solutions=True,
+            save_best_solutions=True,
+            on_start=(lambda _: print('S', end='\n', flush=True)),
+            on_fitness=(lambda _, pop_fit: print(f'F:{np.min(pop_fit)}-{np.max(pop_fit)} ', end='', flush=True)),
+            on_parents=(lambda _, __: print('P ', end='', flush=True)),
+            on_crossover=(lambda _, __: print('C ', end='', flush=True)),
+            on_mutation=(lambda _, __: print('M ', end='', flush=True)),
+            on_generation=(lambda _: print('G', end='\n', flush=True)),
+            on_stop=(lambda _, __: print('X', end='\n', flush=True))
+        )
+
+    def create_operations(self, include_inverse=False, constant_ticks=4):
+        operations = []
+        # constants
+        for i in range(constant_ticks):
+            operations.append(lambda _: np.pi * (i + 1) / constant_ticks)
+        # first degree operations
+        for i in range(self.n_features):
+            operations.append(lambda x: x[i])
+            if include_inverse: operations.append(lambda x: np.pi - x[i])
+        # second degree operations
+        for i in range(self.n_features):
+            for j in range(self.n_features):
+                operations.append(lambda x: x[i] * x[j])
+                if include_inverse:  operations.append(lambda x: (np.pi - x[i]) * (np.pi - x[j]))
+        return operations
+
+    def get_genes(self):
+        return self.get_genes_per_layer() * self.layers
+
+    def get_genes_per_layer(self):
+        return self.n_qubits * 2
+
+    def get_range_gene(self):
+        return self.range_gene
+
+    def get_range_operation(self):
+        return self.range_operation
+
+    def fitness(self, solution, solution_idx):
+        feature_map = lambda x, wires: self.transform_solution_to_embedding(x, solution)
+
+        # index = np.random.choice(self.X.shape[0], batch, replace=False)
+        X_batch = self.X  # [index]
+        y_batch = self.y  # [index]
+
+        gram_matrix = pennylane_projected_quantum_kernel(feature_map, X_batch)
+        fitness = quask.metrics.calculate_kernel_target_alignment(gram_matrix, y_batch)
+        return fitness
+
+    def run(self):
+        self.ga.run()
+        self.ga.plot_fitness()
+        best_solution, best_solution_fitness, _ = self.ga.best_solution()
+        print(f"Best solution: {best_solution} fitness={best_solution_fitness}")
+        plt.savefig(f'fitness_{datetime.now().strftime("%y%m%d_%H%M%S")}.png')
+        plt.clf()
+
+    def transform_solution_to_embedding(self, x, solution):
+        for i, gene in enumerate(solution):
+            n_operation = i % self.get_genes_per_layer()
+            is_single_qubit = n_operation < self.n_qubits
+            wires = [(n_operation + i) % self.n_qubits for i in range(2)]
+            self.apply_operation(gene, x, is_single_qubit, wires=(wires[0] if is_single_qubit else wires))
+
+    def unpack_gene(self, gene):
+        paulis = gene % (self.N_PAULIS ** 2)
+        pauli_1 = paulis // self.N_PAULIS
+        pauli_2 = paulis % self.N_PAULIS
+        operation_index = gene // (self.N_PAULIS ** 2)
+        return pauli_1, pauli_2, operation_index
+
+    def apply_operation(self, gene, x, is_single_qubit, wires):
+
+        pauli_1, pauli_2, operation_index = self.unpack_gene(gene)
+
+        # calculate angle from data
+        # print(f"Gene={gene} (max {self.get_range_gene()} | Operation index={operation_index} (max {self.get_range_operation()})")
+        angle = self.bandwidth * self.operations[operation_index](x)
+
+        if is_single_qubit:
+            if pauli_1 == 0: qml.Identity(wires=wires)
+            elif pauli_1 == 1: qml.RX(angle, wires=wires)
+            elif pauli_1 == 2: qml.RY(angle, wires=wires)
+            elif pauli_1 == 3: qml.RZ(angle, wires=wires)
+        else:
+            unitary = expm(-1j * angle * np.kron(self.PAULIS[pauli_1], self.PAULIS[pauli_2]))
+            assert self.is_unitary(unitary)
+            qml.QubitUnitary(unitary, wires=wires)
+
+    @staticmethod
+    def is_unitary(m):
+        """
+        Check if the matrix is unitary (up to a small numerical error).
+
+        Args:
+            m: square numpy 2-dimensional array of floats
+
+        Returns:
+            True if the matrix is unitary, False otherwise
+        """
+        return np.allclose(np.eye(m.shape[0]), m.dot(m.conj().T))
