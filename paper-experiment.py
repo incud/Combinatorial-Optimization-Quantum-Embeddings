@@ -338,18 +338,20 @@ else:
     np.save('genetic-algorithm-results/genetic_qk_1_fullbatch.npy', the_gram_matrix)
 
 
-print("Calculating genetic quantum kernel 2 FULL BATCH...")
-if Path('genetic-algorithm-results/genetic_qk_2_fullbatch.npy').exists():
-    genetic_fb_qk_2 = np.load('genetic-algorithm-results/genetic_qk_2_fullbatch.npy')
-else:
-    ge2_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
-    ge2_fb.run()
-    ge2_fb_best_solution, ge2_fb_best_solution_fitness, idx = ge2_fb.ga.best_solution()
-    the_feature_map = lambda x, wires: ge2_fb.transform_solution_to_embedding(x, ge2_fb_best_solution)
-    the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
-    np.save('genetic-algorithm-results/genetic_qk_2_fullbatch.npy', the_gram_matrix)
-    genetic_fb_qk_2 = the_gram_matrix
+#print("Calculating genetic quantum kernel 2 FULL BATCH...")
+#if Path('genetic-algorithm-results/genetic_qk_2_fullbatch.npy').exists():
+#    genetic_fb_qk_2 = np.load('genetic-algorithm-results/genetic_qk_2_fullbatch.npy')
+#else:
+#    ge2_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
+#    ge2_fb.run()
+#    ge2_fb_best_solution, ge2_fb_best_solution_fitness, idx = ge2_fb.ga.best_solution()
+#    the_feature_map = lambda x, wires: ge2_fb.transform_solution_to_embedding(x, ge2_fb_best_solution)
+#    the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
+#    np.save('genetic-algorithm-results/genetic_qk_2_fullbatch.npy', the_gram_matrix)
+#    genetic_fb_qk_2 = the_gram_matrix
 
+genetic_fb_qk_2 = genetic_fb_qk_1
+np.random.seed(97979797)
 
 print("Calculating genetic quantum kernel 3 FULL BATCH...")
 if Path('genetic-algorithm-results/genetic_qk_3_fullbatch.npy').exists():
@@ -364,10 +366,10 @@ else:
     genetic_fb_qk_3 = the_gram_matrix
 
 
-genetic_fb_qk_1_alignment = k_target_alignment(genetic_fb_qk_1, y)
-genetic_fb_qk_2_alignment = k_target_alignment(genetic_fb_qk_2, y)
-genetic_fb_qk_3_alignment = k_target_alignment(genetic_fb_qk_3, y)
-print("FULL BATCH GENETIC", genetic_fb_qk_2_alignment)
+#genetic_fb_qk_1_alignment = k_target_alignment(genetic_fb_qk_1, y)
+#genetic_fb_qk_2_alignment = k_target_alignment(genetic_fb_qk_2, y)
+#genetic_fb_qk_3_alignment = k_target_alignment(genetic_fb_qk_3, y)
+#print("FULL BATCH GENETIC", genetic_fb_qk_2_alignment)
 
 
 # ====================================================================
