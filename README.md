@@ -1,6 +1,14 @@
-# QuASK  [![Made at CERN!](https://img.shields.io/badge/CERN-CERN%20openlab-brightgreen)](https://openlab.cern/) [![Made at CERN!](https://img.shields.io/badge/CERN-Open%20Source-%232980b9.svg)](https://home.cern) [![Made at CERN!](https://img.shields.io/badge/CERN-QTI-blue)](https://quantum.cern/our-governance)
+# Genetic-optimized Quantum Embeddings
 
-## Quantum Advantage Seeker with Kernel
+This repository contains the results shown in the Extended Abstract
+*"Genetic Algorithms can automatize the design of Quantum Embeddings"*
+under submission for QTML'22 and code to reproduce them.
+
+The results are shown in `genetic-algorithm-results` directory while 
+the code can be run using `python3.9 paper-experiment.py`. The code 
+is based on QuASK library.
+
+## QuASK - Quantum Advantage Seeker with Kernel
 
 QuASK is a quantum machine learning software written in Python that 
 supports researchers in designing, experimenting, and assessing 
@@ -25,69 +33,3 @@ the quantum and classical kernels.
 
 The initial release is accompanied by the journal article ["QuASK - Quantum
 Advantage Seeker with Kernels" available on arxiv.org](https://arxiv.org/abs/2206.15284).
-
-## Installation
-
-The software has been tested on Python 3.9.10. We recommend using this version or a newer one. 
-
-You can install the software directly from the repository using the command:
-
-```python3 -m pip install https://github.com/CERN-IT-INNOVATION/QuASK/releases/download/1.0.0-beta/quask-1.0.0b0-py3-none-any.whl```
-
-If the software shows dependencies related problems, download the repository and 
-from the main directory run the command:
-
-```python3 -m pip install -r requirements.txt```
-
-## Usage
-
-### Use quask as a library of software components
-
-QuASK can be used as a library to extend your own software. Check if everything's working with:
-
-```python
-import numpy as np
-import quask.metrics
-A = np.array([[1,2], [3,4]])
-B = np.array([[5,6], [7,8]])
-print(quask.metrics.calculate_frobenius_inner_product(A, B))  # 70
-```
-
-### Use quask as a command-line interface tool
-
-QuASK can be used as a command-line interface to analyze the dataset with the
-kernel methods. These are the commands implemented so far.
-
-To retrieve the datasets available:
-
-    $ python3.9 -m quask get-dataset
-
-To preprocess a dataset:
-
-    $ python3.9 -m quask preprocess-dataset
-
-To analyze a dataset using quantum and classical kernels:
-
-    $ python3.9 -m quask apply-kernel
-
-To create some plot of the property related to the generated Gram matrices:
-
-    $ python3.9 -m quask plot-metric --metric accuracy --train-gram training_linear_kernel.npy --train-y Y_train.npy --test-gram testing_linear_kernel.npy --test-y Y_test.npy --label linear
-
-
-## Credits
-
-Please cite the work using the following Bibtex entry:
-
-```text
-@article{https://doi.org/10.48550/arxiv.2206.15284,
-  doi = {10.48550/ARXIV.2206.15284},
-  url = {https://arxiv.org/abs/2206.15284},
-  author = {Di Marcantonio, Francesco and Incudini, Massimiliano and Tezza, Davide and Grossi, Michele},
-  keywords = {Quantum Physics (quant-ph), Machine Learning (cs.LG), FOS: Physical sciences, FOS: Physical sciences, FOS: Computer and information sciences, FOS: Computer and information sciences},
-  title = {QuASK -- Quantum Advantage Seeker with Kernels},
-  publisher = {arXiv},
-  year = {2022},
-  copyright = {Creative Commons Attribution 4.0 International}
-}
-```

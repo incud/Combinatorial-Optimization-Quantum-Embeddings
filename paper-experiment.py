@@ -238,30 +238,6 @@ trainable_qk_3_alignment = k_target_alignment(trainable_qk_3, y)
 print(trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignment)
 
 
-
-# ====================================================================
-# ================ CLASSIFY WITH GENETIC ALGORITHMS ==================
-# ====================================================================
-
-np.random.seed(574534)
-
-print("Calculating genetic quantum kernel 1 FULL BATCH...")
-if Path('genetic-algorithm-results/genetic_qk_1_fullbatch.npy').exists():
-    genetic_fb_qk_1 = np.load('genetic-algorithm-results/genetic_qk_1_fullbatch.npy')
-else:
-    ge1_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
-    ge1_fb.run()
-    ge1_fb_best_solution, ge1_fb_best_solution_fitness, idx = ge1_fb.ga.best_solution()
-    the_feature_map = lambda x, wires: ge1_fb.transform_solution_to_embedding(x, ge1_fb_best_solution)
-    the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
-    the_fitness = quask.metrics.calculate_kernel_target_alignment(the_gram_matrix, y)
-    np.save('genetic-algorithm-results/genetic_qk_1_fullbatch.npy', the_gram_matrix)
-
-
-genetic_fb_qk_1_alignment = k_target_alignment(genetic_fb_qk_1, y)
-print("FULL BATCH GENETIC", genetic_fb_qk_1_alignment)
-
-
 # ====================================================================
 # ============= CLASSIFY WITH TRAINABLE QUANTUM KERNELS ==============
 # ===================== FULL BATCH ===================================
@@ -278,6 +254,7 @@ layers = d
 adam_optimizer = optax.adam(learning_rate=0.1)
 epochs = 100
 
+print("TRAINING PARAMETERS FULLBATCH")
 if Path('genetic-algorithm-results/trainable_params_init_fullbatch.npy').exists():
     params_tentatives = np.load('genetic-algorithm-results/trainable_params_init_fullbatch.npy')
 else:
@@ -341,6 +318,58 @@ print("Trainable full batch:")
 print(trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignment)
 
 
+
+
+# ====================================================================
+# ================ CLASSIFY WITH GENETIC ALGORITHMS ==================
+# ===================== FULL BATCH ===================================
+
+np.random.seed(574534)
+
+print("Calculating genetic quantum kernel 1 FULL BATCH...")
+if Path('genetic-algorithm-results/genetic_qk_1_fullbatch.npy').exists():
+    genetic_fb_qk_1 = np.load('genetic-algorithm-results/genetic_qk_1_fullbatch.npy')
+else:
+    ge1_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
+    ge1_fb.run()
+    ge1_fb_best_solution, ge1_fb_best_solution_fitness, idx = ge1_fb.ga.best_solution()
+    the_feature_map = lambda x, wires: ge1_fb.transform_solution_to_embedding(x, ge1_fb_best_solution)
+    the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
+    np.save('genetic-algorithm-results/genetic_qk_1_fullbatch.npy', the_gram_matrix)
+
+
+print("Calculating genetic quantum kernel 2 FULL BATCH...")
+if Path('genetic-algorithm-results/genetic_qk_2_fullbatch.npy').exists():
+    genetic_fb_qk_2 = np.load('genetic-algorithm-results/genetic_qk_2_fullbatch.npy')
+else:
+    ge2_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
+    ge2_fb.run()
+    ge2_fb_best_solution, ge2_fb_best_solution_fitness, idx = ge2_fb.ga.best_solution()
+    the_feature_map = lambda x, wires: ge2_fb.transform_solution_to_embedding(x, ge2_fb_best_solution)
+    the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
+    np.save('genetic-algorithm-results/genetic_qk_2_fullbatch.npy', the_gram_matrix)
+    genetic_fb_qk_2 = the_gram_matrix
+
+
+print("Calculating genetic quantum kernel 3 FULL BATCH...")
+if Path('genetic-algorithm-results/genetic_qk_3_fullbatch.npy').exists():
+    genetic_fb_qk_2 = np.load('genetic-algorithm-results/genetic_qk_3_fullbatch.npy')
+else:
+    ge3_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
+    ge3_fb.run()
+    ge3_fb_best_solution, ge3_fb_best_solution_fitness, idx = ge3_fb.ga.best_solution()
+    the_feature_map = lambda x, wires: ge3_fb.transform_solution_to_embedding(x, ge3_fb_best_solution)
+    the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
+    np.save('genetic-algorithm-results/genetic_qk_3_fullbatch.npy', the_gram_matrix)
+    genetic_fb_qk_3 = the_gram_matrix
+
+
+genetic_fb_qk_1_alignment = k_target_alignment(genetic_fb_qk_1, y)
+genetic_fb_qk_2_alignment = k_target_alignment(genetic_fb_qk_2, y)
+genetic_fb_qk_3_alignment = k_target_alignment(genetic_fb_qk_3, y)
+print("FULL BATCH GENETIC", genetic_fb_qk_2_alignment)
+
+
 # ====================================================================
 # ================================ PLOTS =============================
 # ====================================================================
@@ -361,19 +390,19 @@ print(trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignme
 # plt.savefig(f'comparison_fullbatch_{datetime.now().strftime("%y%m%d_%H%M%S_%f")}.png')
 # plt.clf()
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from datetime import datetime
 
-ga1_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_1.npy')
-ga1_fb_fitnesses_per_iter = [ga1_fb_fitnesses[i*10:i*10+10] for i in range(51)]
-the_ga_y = np.max(ga1_fb_fitnesses_per_iter, axis=1)
-the_ga_x = len(the_ga_y)
-plt.plot(range(the_ga_x), the_ga_y, label="1st run GA (stochastic fitness)", c='red')
-plt.scatter([the_ga_x] * 1, [genetic_fb_qk_1_alignment], label="GA KTA", s=50, c='red')
-plt.scatter([the_ga_x] * 3, [trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignment], label="Trainable kernel KTA", s=50, c='blue')
-plt.scatter([the_ga_x] * 3, [random_qk_1_alignment, random_qk_2_alignment, random_qk_3_alignment], label="Random kernel KTA", s=50, c='green')
-plt.legend()
-plt.ylabel('Kernel-Target alignment')
-plt.xlabel('Iteration of GA algorithm')
-plt.savefig(f'comparison_fullbatch_{datetime.now().strftime("%y%m%d_%H%M%S_%f")}.png')
-plt.clf()
+# ga1_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_1.npy')
+# ga1_fb_fitnesses_per_iter = [ga1_fb_fitnesses[i*10:i*10+10] for i in range(51)]
+# the_ga_y = np.max(ga1_fb_fitnesses_per_iter, axis=1)
+# the_ga_x = len(the_ga_y)
+# plt.plot(range(the_ga_x), the_ga_y, label="1st run GA (stochastic fitness)", c='red')
+# plt.scatter([the_ga_x] * 1, [genetic_fb_qk_1_alignment], label="GA KTA", s=50, c='red')
+# plt.scatter([the_ga_x] * 3, [trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignment], label="Trainable kernel KTA", s=50, c='blue')
+# plt.scatter([the_ga_x] * 3, [random_qk_1_alignment, random_qk_2_alignment, random_qk_3_alignment], label="Random kernel KTA", s=50, c='green')
+# plt.legend()
+# plt.ylabel('Kernel-Target alignment')
+# plt.xlabel('Iteration of GA algorithm')
+# plt.savefig(f'comparison_fullbatch_{datetime.now().strftime("%y%m%d_%H%M%S_%f")}.png')
+# plt.clf()
