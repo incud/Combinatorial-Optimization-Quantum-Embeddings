@@ -390,19 +390,27 @@ print("FULL BATCH GENETIC", genetic_fb_qk_2_alignment)
 # plt.savefig(f'comparison_fullbatch_{datetime.now().strftime("%y%m%d_%H%M%S_%f")}.png')
 # plt.clf()
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from datetime import datetime
 
-# ga1_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_1.npy')
-# ga1_fb_fitnesses_per_iter = [ga1_fb_fitnesses[i*10:i*10+10] for i in range(51)]
-# the_ga_y = np.max(ga1_fb_fitnesses_per_iter, axis=1)
-# the_ga_x = len(the_ga_y)
-# plt.plot(range(the_ga_x), the_ga_y, label="1st run GA (stochastic fitness)", c='red')
-# plt.scatter([the_ga_x] * 1, [genetic_fb_qk_1_alignment], label="GA KTA", s=50, c='red')
-# plt.scatter([the_ga_x] * 3, [trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignment], label="Trainable kernel KTA", s=50, c='blue')
-# plt.scatter([the_ga_x] * 3, [random_qk_1_alignment, random_qk_2_alignment, random_qk_3_alignment], label="Random kernel KTA", s=50, c='green')
-# plt.legend()
-# plt.ylabel('Kernel-Target alignment')
-# plt.xlabel('Iteration of GA algorithm')
-# plt.savefig(f'comparison_fullbatch_{datetime.now().strftime("%y%m%d_%H%M%S_%f")}.png')
-# plt.clf()
+ga1_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_1.npy')
+ga1_fb_fitnesses_per_iter = [ga1_fb_fitnesses[i*10:i*10+10] for i in range(51)]
+ga2_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_2.npy')
+ga2_fb_fitnesses_per_iter = [ga2_fb_fitnesses[i*10:i*10+10] for i in range(51)]
+ga3_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_3.npy')
+ga3_fb_fitnesses_per_iter = [ga3_fb_fitnesses[i*10:i*10+10] for i in range(51)]
+genetic_fb_qk_1_alignment = k_target_alignment(genetic_fb_qk_1, y)
+genetic_fb_qk_2_alignment = k_target_alignment(genetic_fb_qk_2, y)
+genetic_fb_qk_3_alignment = k_target_alignment(genetic_fb_qk_3, y)
+the_ga_x = len(np.max(ga1_fb_fitnesses_per_iter, axis=1))
+plt.plot(range(the_ga_x), np.max(ga1_fb_fitnesses_per_iter, axis=1), label="1st run GA (stochastic fitness)", c='#ff0011')
+plt.plot(range(the_ga_x), np.max(ga2_fb_fitnesses_per_iter, axis=1), label="2st run GA (stochastic fitness)", c='#ff0022')
+plt.plot(range(the_ga_x), np.max(ga3_fb_fitnesses_per_iter, axis=1), label="3st run GA (stochastic fitness)", c='#ff0033')
+plt.scatter([the_ga_x] * 3, [genetic_fb_qk_1_alignment, genetic_fb_qk_2_alignment, genetic_fb_qk_3_alignment], label="GA KTA", s=50, c='red')
+plt.scatter([the_ga_x] * 3, [trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignment], label="Trainable kernel KTA", s=50, c='blue')
+plt.scatter([the_ga_x] * 3, [random_qk_1_alignment, random_qk_2_alignment, random_qk_3_alignment], label="Random kernel KTA", s=50, c='green')
+plt.legend()
+plt.ylabel('Kernel-Target alignment')
+plt.xlabel('Iteration of GA algorithm')
+plt.savefig(f'comparison_fullbatch_{datetime.now().strftime("%y%m%d_%H%M%S_%f")}.png')
+plt.clf()
