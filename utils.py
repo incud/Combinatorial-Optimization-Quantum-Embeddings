@@ -69,3 +69,18 @@ def load_synthetic(file):
     dataset['weights'] = filedata.item().get('weights')
     dataset['Y'] = filedata.item().get('Y')
     return dataset
+
+
+def compute_histogram(vals, ticks, bins):
+    hist = np.zeros(ticks)
+    for i in range(len(vals)):
+        for c in range(len(ticks)):
+            if vals[i] < bins[c]:
+                hist[c-1] +=1
+                break
+    return hist
+
+def upper_tri_indexing(A):
+    m = A.shape[0]
+    r,c = np.triu_indices(m,1)
+    return A[r,c]
