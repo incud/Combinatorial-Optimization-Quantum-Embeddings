@@ -194,7 +194,7 @@ genetic_fb_qk_3_alignment = k_target_alignment(genetic_fb_qk_3, y)
 # ax.legend()
 #
 # #plt.savefig(f'comparison_1_eigenvalues_{datetime.now().strftime("%y%m%d_%H%M%S_%f")}.png')
-# plt.savefig(res_dir + f'/plot/comparison_1_eigenvalues.png')
+# plt.savefig(res_dir + f'/figures/comparison_1_eigenvalues.png')
 #
 #
 #
@@ -244,7 +244,7 @@ genetic_fb_qk_3_alignment = k_target_alignment(genetic_fb_qk_3, y)
 # ax.set_xscale('log')
 # ax.legend()
 #
-# plt.savefig(res_dir + f'/plot/comparison_2_first_bin.png')
+# plt.savefig(res_dir + f'/figures/comparison_2_first_bin.png')
 
 
 
@@ -302,7 +302,7 @@ plt.xticks([r + barWidth for r in range(len(means))],
            ['Random', 'Trainable', 'Trainable (full batch)', 'Genetic', 'Genetic (full batch)'])
 
 plt.legend()
-plt.savefig(res_dir + f'/plot/comparison_3_m_v_ds.png')
+plt.savefig(res_dir + f'/figures/comparison_3_m_v_ds.png')
 
 
 plt.clf()
@@ -351,4 +351,4 @@ ax.hist(values, bins=bins, width=0.4, color=colors, label=labels)
 ax.set_xscale('log')
 ax.legend()
 
-plt.savefig(res_dir + f'/plot/comparison_2_first_bin.png')
+plt.savefig(res_dir + f'/figures/comparison_2_first_bin.png')
