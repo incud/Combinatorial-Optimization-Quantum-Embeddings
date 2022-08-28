@@ -181,8 +181,8 @@ def train_genetic(dataset, gens, spp, metric, path, name, seed):
 
         ge = GeneticEmbedding(valid_x, valid_y, d, layers, num_generations=gens, solution_per_population=spp)
         ge.run()
-        kerneldata['ge_best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
-        feature_map = lambda x, wires: ge.transform_solution_to_embedding(x, kerneldata['ge_best_solution'])
+        kerneldata['best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
+        feature_map = lambda x, wires: ge.transform_solution_to_embedding(x, kerneldata['best_solution'])
         kerneldata['K'] = pennylane_projected_quantum_kernel(feature_map, valid_x)
         kerneldata['K_test'] = pennylane_projected_quantum_kernel(feature_map, np.array(dataset['test_x']), valid_x)
         np.save(file, kerneldata)

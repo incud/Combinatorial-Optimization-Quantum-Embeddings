@@ -209,5 +209,5 @@ def load_genetick(file):
     filedata = np.load(file, allow_pickle=True)
     kernel['K'] = filedata.item().get('K')
     kernel['K_test'] = filedata.item().get('K_test')
-    kernel['starting_params'] = filedata.item().get('starting_params')
+    kernel['best_solution'] = filedata.item().get('best_solution')
     return kernel
