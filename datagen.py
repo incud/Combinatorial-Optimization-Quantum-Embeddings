@@ -96,8 +96,8 @@ def generate_mnist_data(res_dir, name, d, n, seed, test, valid):
         dataset['test_y'] = [dataset['YC1'][i] for i in range(len(dataset['YC1'])) if i not in idxs_trainc1] + [
             dataset['YC2'][i] for i in range(len(dataset['YC2'])) if i not in idxs_trainc2]
 
-        idxs_validc1 = np.random.choice(idxs_trainc1, valid_n, replace=False)
-        idxs_validc2 = np.random.choice(idxs_trainc2, valid_n, replace=False)
+        idxs_validc1 = np.random.choice(idxs_trainc1, valid_nc1, replace=False)
+        idxs_validc2 = np.random.choice(idxs_trainc2, valid_nc2, replace=False)
 
         dataset['valid_x'] = [dataset['XC1'][i] for i in idxs_validc1] + [dataset['XC2'][i] for i in idxs_validc2]
         dataset['valid_y'] = [dataset['YC1'][i] for i in idxs_validc1] + [dataset['YC2'][i] for i in idxs_validc2]
