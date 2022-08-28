@@ -103,30 +103,25 @@ def accuracy_svc(gram, gram_test, y, y_test):
 
 
 
+def find_pretrained(path, name):
+    namel = (name + '.npy').split('_')
+    namel.pop(1)
+    best = ''
+    best_eps = 0
+    kernels = [f for f in os.listdir(path) if f.endswith('.' + "npy")]
+    for i in range(len(kernels)):
+        tmp = kernels[i].split('_')
+        eps = tmp.pop(1)
+        if  namel == tmp and int(eps) > best_eps:
+            best = kernels[i]
+            best_eps = int(eps)
+    return best
+
+
+
 # # ====================================================================
 # # ==================== LOAD DATASET ==================================
 # # ====================================================================
-
-def load_dataset_ui(res_dir):
-    dataset = {}
-    name = ''
-    print('\nAVAILABLE DATASETS:')
-    datalist = [ f.name for f in os.scandir(res_dir) if f.is_dir() ]
-    for i in range(len(datalist)):
-        print(' ' + str(i) +'- ' + datalist[i])
-    index = input('\nChoose a dataset to load by submitting its index or press any key to stop the program: ')
-    if index.isdigit() and int(index) < len(datalist):
-        name = datalist[int(index)]
-        if 'synthetic' in name:
-            dataset = load_synthetic(res_dir + '/' + name + '/' + name +'.npy')
-        # elif:
-        # load other kind of dataset
-    else:
-        quit()
-
-    return dataset, name
-
-
 
 def load_dataset(file, type):
     if type == 'synt':
@@ -171,4 +166,48 @@ def load_mnist(file):
     return dataset
 
 
+# # ====================================================================
+# # ==================== LOAD DATASET ==================================
+# # ====================================================================
 
+def load_kernel(file, type):
+    if type == 'random':
+        return load_randomk(file)
+    elif type == 'trainable':
+        return load_trainablek(file)
+    elif type == 'genetic':
+        return ''
+
+
+
+# load random kernel
+def load_randomk(file):
+    kernel = {}
+    filedata = np.load(file, allow_pickle=True)
+    kernel['K'] = filedata.item().get('K')
+    kernel['K_test'] = filedata.item().get('K_test')
+    kernel['weights'] = filedata.item().get('weights')
+    return kernel
+
+
+
+# load trainable kernel
+def load_trainablek(file):
+    kernel = {}
+    filedata = np.load(file, allow_pickle=True)
+    kernel['K'] = filedata.item().get('K')
+    kernel['K_test'] = filedata.item().get('K_test')
+    kernel['starting_params'] = filedata.item().get('starting_params')
+    kernel['trained_params'] = filedata.item().get('trained_params')
+    return kernel
+
+
+
+# load genetic kernel
+def load_genetick(file):
+    kernel = {}
+    filedata = np.load(file, allow_pickle=True)
+    kernel['K'] = filedata.item().get('K')
+    kernel['K_test'] = filedata.item().get('K_test')
+    kernel['starting_params'] = filedata.item().get('starting_params')
+    return kernel

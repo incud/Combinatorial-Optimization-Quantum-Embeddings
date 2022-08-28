@@ -70,54 +70,12 @@ def conf_process(file):
 
 
 
-
-# suspended
-def ui_process():
-    global res_dir
-    base_dir = input('\nChoose a directory as working space (default="experiments-results"): ')
-    if base_dir != '' and not (base_dir is None):
-        res_dir = base_dir
-    # create workspace directories (if they do not exist)
-    if not os.path.isdir(res_dir): os.mkdir(res_dir)
-
-    # variational algorithm parameter
-    layers = 10
-    epochs = 100
-    optimizer = optax.adam(learning_rate=0.1)
-
-    # genetic algorithm parameters
-    num_generations = 50
-    solution_per_population = 10
-
-    dataset, name = load_dataset()
-
-    # main loop
-    while True:
-        print(menu)
-        task = input()
-        if task == '1':
-
-            d = int(input('Submit number of features per sample:'))
-            n = int(input('Submit number of samples in the dataset:'))
-            [dataset, name] = generate_data()
-            print('\nDataset ' + name + ' loaded.\n')
-        elif task == '2':
-            train_random(name, dataset['X'])
-        elif task == '3':
-            break
-        elif task == '4':
-            break
-        else:
-            break
-
-
-
 def main(conf=False, file=None):
     print('\n##### PROCESS STARTED #####\n')
     if conf:
         conf_process(file)
     else:
-        ui_process()
+        print("\n!!!!! CONFIGURATION FILE REQUIRED !!!!!\n")
     print("\n##### PROCESS COMPLETED #####\n")
 
 

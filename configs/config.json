@@ -25,7 +25,7 @@
         },
         {
           "type": "trainable",
-          "epochs": 2,
+          "epochs": 4,
           "metric": "mse",
           "seed": 126
         },
@@ -58,27 +58,6 @@
           "epochs": 2,
           "metric": "kta",
           "seed": 124604
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "mse",
-          "seed": 126
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "mse",
-          "seed": 1526
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "mse",
-          "seed": 12960
         },
         {
           "type": "genetic",
@@ -160,27 +139,6 @@
           "epochs": 2,
           "metric": "kta",
           "seed": 124604
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "acc",
-          "seed": 126
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "acc",
-          "seed": 1526
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "acc",
-          "seed": 12960
         },
         {
           "type": "genetic",

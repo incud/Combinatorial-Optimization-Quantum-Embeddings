@@ -155,3 +155,4 @@ def generate_synthetic_data(res_dir, name, d, n, seed, test, valid):
         print('Dataset ' + name + ' has been generated.')
 
     return [dataset, name]
+
