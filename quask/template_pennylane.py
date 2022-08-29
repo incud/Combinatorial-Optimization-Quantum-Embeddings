@@ -611,7 +611,7 @@ class GeneticEmbedding:
         self.solution_per_population = solution_per_population
         self.validation_X = validation_X
         self.validation_y = validation_y
-        self.variance_idxs = []
+        self.variance_idxs = [[],[]]
         self.low_variance_list = []
         self.initial_population = initial_population
         self.verbose = verbose
@@ -620,7 +620,18 @@ class GeneticEmbedding:
 
         def prep_variance_computation():
             n = np.shape(self.X)[0]
-            self.variance_idxs = np.random.randint(low=0,high=n,size=(2, int(np.log2(n*n))))
+            self.variance_idxs = [[],[]]
+            idxs = np.random.choice(range(int((n*n-1)/2)), int(np.log2(n*n)), replace = False)
+            for i in idxs:
+                row = 0
+                column = n - 1
+                c = column
+                while i > c:
+                    column -= 1
+                    row += 1
+                    c += column
+                self.variance_idxs[0].append(row)
+                self.variance_idxs[1].append(n + i - c - 1)
             self.low_variance_list.append([])
 
         def on_start(ga_instance):
