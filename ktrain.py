@@ -90,7 +90,7 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
         print('Kernel ' + name + ' already exists!')
     else:
         pretrained = find_pretrained(path, name)
-        if(pretrained == ''):
+        if pretrained == '':
             params = jax.random.normal(jax.random.PRNGKey(seed), shape=(layers, 2 * d))
             first_epoch = 0
         else:
@@ -133,7 +133,7 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
             updates, opt_state = adam_optimizer.update(grad_circuit, opt_state)
             params = optax.apply_updates(params, updates)
             end = time.process_time()
-            sys.stdout.write('\033[K' + 'Epoch: ' + str(epoch+1) + ' completed. --- Estimated time left: ' + str(datetime.timedelta(seconds=(epochs - epoch) * (end - start)/(epoch + 1))) + '\r')
+            sys.stdout.write('\033[K' + 'Epoch: ' + str(epoch+1) + ' completed. --- Estimated time left: ' + str(datetime.timedelta(seconds=(epochs - epoch - first_epoch) * (end - start)/(epoch - first_epoch + 1))) + '\r')
 
         kerneldata['trained_params'] = params.copy()
         kerneldata['K'] = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, kerneldata['trained_params'], layers, wires=wires), valid_x)
@@ -149,14 +149,6 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
 
 def train_genetic(dataset, gens, spp, metric, path, name, seed):
 
-    # @contextmanager
-    # def suppress_stdout_stderr():
-    #     """A context manager that redirects stdout and stderr to devnull"""
-    #     with open(devnull, 'w') as fnull:
-    #         with redirect_stdout(fnull) as out:
-    #             yield out
-    #             print('gen')
-
     np.random.seed(seed)
     jax.random.PRNGKey(seed)
     kerneldata = {}
@@ -167,21 +159,40 @@ def train_genetic(dataset, gens, spp, metric, path, name, seed):
     if Path(file).exists():
         print('Kernel ' + name + ' already exists!')
     else:
-        # pretrained = find_pretrained(path, name)
-        # if (pretrained == ''):
-        #     pass
-        # else:
-        #     kerneldata = load_kernel(path + pretrained, 'genetic')
-
-        valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
-        valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
         d = np.shape(dataset['train_x'])[1]
         layers = np.shape(dataset['train_x'])[1]
-        # start = time.process_time()
 
-        ge = GeneticEmbedding(valid_x, valid_y, d, layers, num_generations=gens, solution_per_population=spp)
+        pretrained = find_pretrained(path, name)
+        if pretrained == '':
+            init_pop = None
+            old_gen = 0
+        else:
+            kerneldata = load_kernel(path + pretrained, 'genetic')
+            init_pop = kerneldata['population']
+            assert init_pop is not None
+            old_gen = int(pretrained.split('_')[1])
+
+        if metric == 'mse':
+            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']), d, layers, 0.4,
+                                  num_generations=gens - old_gen,
+                                  solution_per_population=spp,
+                                  initial_population= init_pop,
+                                  fitness_mode='mse',
+                                  validation_X=np.array(dataset['valid_x']),
+                                  validation_y=np.array(dataset['valid_y']),
+                                  verbose=True)
+        elif metric == 'kta':
+            valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
+            valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
+            ge = GeneticEmbedding(valid_x, valid_y, d, layers, 0.4,
+                                  num_generations=gens - old_gen,
+                                  solution_per_population=spp,
+                                  initial_population=init_pop,
+                                  fitness_mode='kta',
+                                  verbose='minimal')
         ge.run()
         kerneldata['best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
+        kerneldata['population'] = ge.ga.population
         feature_map = lambda x, wires: ge.transform_solution_to_embedding(x, kerneldata['best_solution'])
         kerneldata['K'] = pennylane_projected_quantum_kernel(feature_map, valid_x)
         kerneldata['K_test'] = pennylane_projected_quantum_kernel(feature_map, np.array(dataset['test_x']), valid_x)

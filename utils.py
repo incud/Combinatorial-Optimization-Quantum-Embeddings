@@ -176,7 +176,7 @@ def load_kernel(file, type):
     elif type == 'trainable':
         return load_trainablek(file)
     elif type == 'genetic':
-        return ''
+        return load_genetick(file)
 
 
 
@@ -210,4 +210,5 @@ def load_genetick(file):
     kernel['K'] = filedata.item().get('K')
     kernel['K_test'] = filedata.item().get('K_test')
     kernel['best_solution'] = filedata.item().get('best_solution')
+    kernel['population'] = filedata.item().get('population')
     return kernel
