@@ -104,8 +104,9 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
         train_x = np.array(dataset['train_x'])
         start = time.process_time()
 
+        sys.stdout.write('\033[K' + 'Training started. --- Estimated time left: H:mm:ss.dddddd' + '\r')
         for epoch in range(first_epoch, epochs):
-            sys.stdout.write('\033[K' + 'Training started. --- Estimated time left: H:mm:ss.dddddd' + '\r')
+
             if metric == 'mse':
                 # train on partial training set with full training set as validation
                 K = pennylane_projected_quantum_kernel(
