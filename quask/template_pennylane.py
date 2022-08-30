@@ -584,7 +584,7 @@ class GeneticEmbedding:
     def __init__(self, X, y, n_qubits, layers, kernel_concentration_threshold,
                  bandwidth=1.0,
                  num_generations=50,
-                 num_parents_mating=4,
+                 num_parents_mating=5,
                  solution_per_population=4,
                  parent_selection_type="sss",
                  crossover_type="single_point",
@@ -621,12 +621,12 @@ class GeneticEmbedding:
         def prep_variance_computation():
             n = np.shape(self.X)[0]
             self.variance_idxs = [[],[]]
-            idxs = np.random.choice(range(int((n*n-1)/2)), int(np.log2(n*n)), replace = False)
+            idxs = np.random.choice(range(int((n*(n-1))/2)), int(np.log2(n*n)), replace = False)
             for i in idxs:
                 row = 0
                 column = n - 1
                 c = column
-                while i > c:
+                while i > c and c != int((n*(n-1))/2)-1:
                     column -= 1
                     row += 1
                     c += column
@@ -648,31 +648,39 @@ class GeneticEmbedding:
                 print(self.low_variance_list[len(self.low_variance_list) - 2])
                 print(f'F:{np.min(population_fitness)}-{np.max(population_fitness)} ', end='', flush=True)
             elif self.verbose == 'minimal':
+                max_var = '*'
+                if self.low_variance_list[len(self.low_variance_list) - 2]: max_var = str(max(self.low_variance_list[len(self.low_variance_list) - 2]))
                 sys.stdout.write('\033[K' + 'Remaining generation: ' + str(self.num_generations - self.count) +
-                                 ' --- Max Fitness: ' + str(np.max(population_fitness)) +
-                                 ' --- Estimated time left: ' + str(timedelta(seconds=(self.num_generations - self.count) * (end - self.start) / self.count)) + ' ')
+                                 ' --- Max fitness: ' + str(np.max(population_fitness)) +
+                                 ' --- Max variance (excluded samples): ' + max_var +
+                                 ' --- Estimated time left: ' + str(timedelta(seconds=(self.num_generations - self.count) * (end - self.start) / self.count)) +
+                                 ' ')
 
         def on_parents(ga_instance, selected_parents):
             if self.verbose == True:
                 print('P', end='', flush=True)
+                print(len(selected_parents))
             elif self.verbose == 'minimal':
                 sys.stdout.write('P')
 
         def on_crossover(ga_instance, offspring_crossover):
             if self.verbose == True:
                 print('C', end='', flush=True)
+                print(len(offspring_crossover))
             elif self.verbose == 'minimal':
                 sys.stdout.write('C')
 
         def on_mutation(ga_instance, offspring_mutation):
             if self.verbose == True:
                 print('M', end='', flush=True)
+                print(len(offspring_mutation))
             elif self.verbose == 'minimal':
                 sys.stdout.write('M')
 
         def on_generation(ga_instance):
             if self.verbose == True:
                 print('G', end='\n', flush=True)
+                print(len(ga_instance.population))
             elif self.verbose == 'minimal':
                 sys.stdout.write('G\r')
 
@@ -760,10 +768,13 @@ class GeneticEmbedding:
         y_batch = self.y
 
         variance = compute_variance(feature_map, X_batch[self.variance_idxs[0]], X_batch[self.variance_idxs[1]])
+        print(variance)
         if variance < self.kernel_concentration_threshold:
             self.low_variance_list[len(self.low_variance_list) - 1].append(variance)
+            print('Low variance, discarted')
             return -np.inf
 
+        print('High variance...')
         gram_matrix = pennylane_projected_quantum_kernel(feature_map, X_batch)
 
         if self.fitness_mode == 'mse':

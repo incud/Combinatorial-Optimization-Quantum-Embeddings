@@ -125,7 +125,7 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
             updates, opt_state = adam_optimizer.update(grad_circuit, opt_state)
             params = optax.apply_updates(params, updates)
             end = time.process_time()
-            sys.stdout.write('\033[K' + 'Epoch: ' + str(epoch+1) + ' completed. --- Estimated time left: ' + str(datetime.timedelta(seconds=(epochs - epoch - first_epoch) * (end - start)/(epoch - first_epoch + 1))) + '\r')
+            sys.stdout.write('\033[K' + 'Epoch: ' + str(epoch+1) + ' completed. --- Estimated time left: ' + str(datetime.timedelta(seconds=(epochs - epoch) * (end - start)/(epoch - first_epoch + 1))) + '\r')
 
         kerneldata['trained_params'] = params.copy()
         kerneldata['K'] = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, kerneldata['trained_params'], layers, wires=wires), valid_x)
@@ -165,7 +165,7 @@ def train_genetic(dataset, gens, spp, metric, path, name, seed):
             old_gen = int(pretrained.split('_')[1])
 
         if metric == 'mse':
-            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']), d, layers, 0.4,
+            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']), d, layers, 0.02,
                                   num_generations=gens - old_gen,
                                   solution_per_population=spp,
                                   initial_population= init_pop,
@@ -176,12 +176,12 @@ def train_genetic(dataset, gens, spp, metric, path, name, seed):
         elif metric == 'kta':
             valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
             valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
-            ge = GeneticEmbedding(valid_x, valid_y, d, layers, 0.4,
+            ge = GeneticEmbedding(valid_x, valid_y, d, layers, 0.2,
                                   num_generations=gens - old_gen,
                                   solution_per_population=spp,
                                   initial_population=init_pop,
                                   fitness_mode='kta',
-                                  verbose='minimal')
+                                  verbose=True)
         ge.run()
         kerneldata['best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
         kerneldata['population'] = ge.ga.population
