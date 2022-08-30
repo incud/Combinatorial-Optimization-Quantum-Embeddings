@@ -106,16 +106,7 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
 
         for epoch in range(first_epoch, epochs):
             sys.stdout.write('\033[K' + 'Training started. --- Estimated time left: H:mm:ss.dddddd' + '\r')
-            if metric == 'acc':
-                # train on partial training set with full training set as validation
-                K = pennylane_projected_quantum_kernel(
-                    lambda x, wires: trainable_embedding(x, params, layers, wires=wires), train_x)
-                K_v = pennylane_projected_quantum_kernel(
-                    lambda x, wires: trainable_embedding(x, params, layers, wires=wires),
-                    valid_x, train_x)
-                cost, grad_circuit = jax.value_and_grad(lambda theta: accuracy_svc(K, K_v, dataset['train_y'], dataset['train_y']+dataset['valid_y']))(params)
-
-            elif metric == 'mse':
+            if metric == 'mse':
                 # train on partial training set with full training set as validation
                 K = pennylane_projected_quantum_kernel(
                     lambda x, wires: trainable_embedding(x, params, layers, wires=wires), train_x)

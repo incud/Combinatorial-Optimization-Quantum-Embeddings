@@ -61,102 +61,21 @@
         },
         {
           "type": "genetic",
-          "generations": 50,
+          "generations": 2,
           "spp": 10,
           "metric": "kta",
           "seed": 12446
         },
         {
           "type": "genetic",
-          "generations": 50,
+          "generations": 2,
           "spp": 10,
           "metric": "kta",
           "seed": 152644
         },
         {
           "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "kta",
-          "seed": 124604
-        }
-      ]
-    },
-    {
-      "dataset": {
-        "type": "mnist",
-        "samples": 100,
-        "features": 5,
-        "seed": 126577,
-        "testset": 0.5,
-        "validationset": 0.2
-      },
-      "training": [
-        {
-          "type": "random",
-          "seed": 1234
-        },
-        {
-          "type": "random",
-          "seed": 1235
-        },
-        {
-          "type": "random",
-          "seed": 1236
-        },
-        {
-          "type": "trainable",
-          "epochs": 2,
-          "metric": "acc",
-          "seed": 126
-        },
-        {
-          "type": "trainable",
-          "epochs": 2,
-          "metric": "acc",
-          "seed": 1526
-        },
-        {
-          "type": "trainable",
-          "epochs": 2,
-          "metric": "acc",
-          "seed": 12960
-        },
-        {
-          "type": "trainable",
-          "epochs": 2,
-          "metric": "kta",
-          "seed": 12446
-        },
-        {
-          "type": "trainable",
-          "epochs": 2,
-          "metric": "kta",
-          "seed": 152644
-        },
-        {
-          "type": "trainable",
-          "epochs": 2,
-          "metric": "kta",
-          "seed": 124604
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "kta",
-          "seed": 12446
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
-          "spp": 10,
-          "metric": "kta",
-          "seed": 152644
-        },
-        {
-          "type": "genetic",
-          "generations": 50,
+          "generations": 2,
           "spp": 10,
           "metric": "kta",
           "seed": 124604
