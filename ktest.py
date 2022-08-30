@@ -159,6 +159,7 @@ def conf_process(file):
     print('\n##### GA-HYPERPARAMETER ANALYSIS COMPLETED #####\n')
 
 
+    print('\n##### GA-HYPERPARAMETER ANALYSIS COMPLETED #####\n')
 
     for data in kernels.keys():
         plot_kernels_eigenvalues(kernels[data], data)
