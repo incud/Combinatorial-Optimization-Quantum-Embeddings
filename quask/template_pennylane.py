@@ -6,6 +6,7 @@ import sys
 
 import jax
 from jax.config import config
+from scipy.stats import norm
 from sklearn.metrics import mean_squared_error
 from sklearn.svm import SVR
 
@@ -594,6 +595,7 @@ class GeneticEmbedding:
                  validation_X = None,
                  validation_y = None,
                  initial_population = None,
+                 threshold_mode = 'constant',
                  verbose = True):
         self.X = X
         self.y = y
@@ -617,6 +619,8 @@ class GeneticEmbedding:
         self.verbose = verbose
         self.start = time.process_time()
         self.count = 0
+        self.threshold_mode = threshold_mode
+        self.all_variance_list = []
 
         def prep_variance_computation():
             n = np.shape(self.X)[0]
@@ -641,7 +645,16 @@ class GeneticEmbedding:
                 print('S', end='\n', flush=True)
 
         def on_fitness(ga_instance, population_fitness):
+
+            def update_threshold(variance_list):
+                mean = np.mean(variance_list)
+                std_dev = np.std(variance_list)
+                prob = 1 - self.num_parents_mating/self.solution_per_population
+                self.kernel_concentration_threshold = norm.ppf(prob, loc=mean, scale=std_dev)
+
             prep_variance_computation()
+            if self.threshold_mode == 'adaptive': update_threshold(self.all_variance_list)
+            self.all_variance_list = []
             end = time.process_time()
             self.count += 1
             if self.verbose == True:
@@ -768,6 +781,7 @@ class GeneticEmbedding:
         y_batch = self.y
 
         variance = compute_variance(feature_map, X_batch[self.variance_idxs[0]], X_batch[self.variance_idxs[1]])
+        self.all_variance_list.append(variance)
         if self.verbose == True : print(variance)
         if variance < self.kernel_concentration_threshold:
             self.low_variance_list[len(self.low_variance_list) - 1].append(variance)

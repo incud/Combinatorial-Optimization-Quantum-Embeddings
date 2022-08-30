@@ -65,6 +65,7 @@
           "spp": 10,
           "npm": 0.5,
           "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
           "metric": "kta",
           "seed": 12446
         },
@@ -74,6 +75,7 @@
           "spp": 10,
           "npm": 0.5,
           "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
           "metric": "kta",
           "seed": 152644
         },
@@ -83,6 +85,7 @@
           "spp": 10,
           "npm": 0.5,
           "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
           "metric": "kta",
           "seed": 124604
         },
@@ -92,6 +95,7 @@
           "spp": 10,
           "npm": 0.5,
           "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
           "metric": "mse",
           "seed": 2446
         },
@@ -101,6 +105,7 @@
           "spp": 10,
           "npm": 0.5,
           "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
           "metric": "mse",
           "seed": 52644
         },
@@ -110,6 +115,7 @@
           "spp": 10,
           "npm": 0.5,
           "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
           "metric": "mse",
           "seed": 24604
         }
