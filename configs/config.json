@@ -61,43 +61,55 @@
         },
         {
           "type": "genetic",
-          "generations": 2,
+          "generations": 25,
           "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
           "metric": "kta",
           "seed": 12446
         },
         {
           "type": "genetic",
-          "generations": 2,
+          "generations": 25,
           "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
           "metric": "kta",
           "seed": 152644
         },
         {
           "type": "genetic",
-          "generations": 2,
+          "generations": 25,
           "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
           "metric": "kta",
           "seed": 124604
         },
         {
           "type": "genetic",
-          "generations": 2,
+          "generations": 25,
           "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
           "metric": "mse",
           "seed": 2446
         },
         {
           "type": "genetic",
-          "generations": 2,
+          "generations": 25,
           "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
           "metric": "mse",
           "seed": 52644
         },
         {
           "type": "genetic",
-          "generations": 2,
+          "generations": 25,
           "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
           "metric": "mse",
           "seed": 24604
         }

@@ -35,7 +35,7 @@ def train_kernel(k, path, dataname):
     elif k['type'] == 'trainable':
         train_trainable(splitteddata, k['epochs'], k['metric'], path + '/kernels/', name, k['seed'])
     elif k['type'] == 'genetic':
-        train_genetic(splitteddata, k['generations'], k['spp'], k['metric'], path + '/kernels/', name, k['seed'])
+        train_genetic(splitteddata, k['generations'], k['spp'], k['npm'], k['metric'], path + '/kernels/', name, k['seed'])
     else:
         print('Invalid kernel type: no data will be generated for this configuration.')
         return False, ''
@@ -139,7 +139,7 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
 # ========= TRAIN QUANTUM KERNELS WITH GENETIC ALGORITHMS ============
 # ====================================================================
 
-def train_genetic(dataset, gens, spp, metric, path, name, seed):
+def train_genetic(dataset, gens, spp, npm, metric, path, name, seed):
 
     np.random.seed(seed)
     jax.random.PRNGKey(seed)
@@ -158,33 +158,38 @@ def train_genetic(dataset, gens, spp, metric, path, name, seed):
         if pretrained == '':
             init_pop = None
             old_gen = 0
+            kerneldata['low_variance_list'] = []
         else:
-            kerneldata = load_kernel(path + pretrained, 'genetic')
-            init_pop = kerneldata['population']
+            old_kerneldata = load_kernel(path + pretrained, 'genetic')
+            init_pop = old_kerneldata['population']
+            kerneldata['low_variance_list'] = old_kerneldata['low_variance_list']
             assert init_pop is not None
             old_gen = int(pretrained.split('_')[1])
 
+        valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
+        valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
         if metric == 'mse':
-            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']), d, layers, 0.02,
+            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']), d, layers, 0.1,
+                                  num_parents_mating=int(spp * npm),
                                   num_generations=gens - old_gen,
                                   solution_per_population=spp,
-                                  initial_population= init_pop,
+                                  initial_population=init_pop,
                                   fitness_mode='mse',
                                   validation_X=np.array(dataset['valid_x']),
                                   validation_y=np.array(dataset['valid_y']),
-                                  verbose=True)
+                                  verbose='minimal')
         elif metric == 'kta':
-            valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
-            valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
-            ge = GeneticEmbedding(valid_x, valid_y, d, layers, 0.2,
+            ge = GeneticEmbedding(valid_x, valid_y, d, layers, 0.1,
+                                  num_parents_mating=int(spp * npm),
                                   num_generations=gens - old_gen,
                                   solution_per_population=spp,
                                   initial_population=init_pop,
                                   fitness_mode='kta',
-                                  verbose=True)
+                                  verbose='minimal')
         ge.run()
         kerneldata['best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
         kerneldata['population'] = ge.ga.population
+        kerneldata['low_variance_list'] = kerneldata['low_variance_list'] + ge.low_variance_list
         feature_map = lambda x, wires: ge.transform_solution_to_embedding(x, kerneldata['best_solution'])
         kerneldata['K'] = pennylane_projected_quantum_kernel(feature_map, valid_x)
         kerneldata['K_test'] = pennylane_projected_quantum_kernel(feature_map, np.array(dataset['test_x']), valid_x)

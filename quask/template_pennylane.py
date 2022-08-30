@@ -768,13 +768,13 @@ class GeneticEmbedding:
         y_batch = self.y
 
         variance = compute_variance(feature_map, X_batch[self.variance_idxs[0]], X_batch[self.variance_idxs[1]])
-        print(variance)
+        if self.verbose == True : print(variance)
         if variance < self.kernel_concentration_threshold:
             self.low_variance_list[len(self.low_variance_list) - 1].append(variance)
-            print('Low variance, discarted')
+            if self.verbose == True: print('Low variance, discarted')
             return -np.inf
 
-        print('High variance...')
+        if self.verbose == True : print('High variance...')
         gram_matrix = pennylane_projected_quantum_kernel(feature_map, X_batch)
 
         if self.fitness_mode == 'mse':

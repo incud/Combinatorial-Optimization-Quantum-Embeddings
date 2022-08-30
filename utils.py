@@ -211,4 +211,5 @@ def load_genetick(file):
     kernel['K_test'] = filedata.item().get('K_test')
     kernel['best_solution'] = filedata.item().get('best_solution')
     kernel['population'] = filedata.item().get('population')
+    kernel['low_variance_list'] = filedata.item().get('low_variance_list')
     return kernel

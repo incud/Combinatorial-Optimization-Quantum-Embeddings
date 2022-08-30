@@ -21,6 +21,7 @@ def conf_process(file):
     kernelfiles = []
     count = 0
 
+    print('\n##### GA-HYPERPARAMETER ANALYSIS COMPLETED #####\n')
 
     print('\n##### SPECTRAL ANALYSIS COMPLETED #####\n')
 
