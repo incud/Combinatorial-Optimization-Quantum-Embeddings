@@ -1,0 +1,113 @@
+{
+  "base_dir": "experiments-results",
+  "experiments": [
+    {
+      "dataset": {
+        "type": "synt",
+        "samples": 15,
+        "features": 5,
+        "seed": 12347,
+        "testset": 0.5,
+        "validationset": 0.5
+      },
+      "training": [
+        {
+          "type": "trainable",
+          "epochs": 50,
+          "metric": "mse",
+          "seed": 126
+        },
+        {
+          "type": "trainable",
+          "epochs": 50,
+          "metric": "mse",
+          "seed": 1526
+        },
+        {
+          "type": "trainable",
+          "epochs": 50,
+          "metric": "mse",
+          "seed": 12960
+        },
+        {
+          "type": "trainable",
+          "epochs": 50,
+          "metric": "kta",
+          "seed": 12446
+        },
+        {
+          "type": "trainable",
+          "epochs": 50,
+          "metric": "kta",
+          "seed": 152644
+        },
+        {
+          "type": "trainable",
+          "epochs": 50,
+          "metric": "kta",
+          "seed": 124604
+        },
+        {
+          "type": "genetic",
+          "generations": 25,
+          "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "kta",
+          "seed": 12446
+        },
+        {
+          "type": "genetic",
+          "generations": 25,
+          "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "kta",
+          "seed": 152644
+        },
+        {
+          "type": "genetic",
+          "generations": 25,
+          "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "kta",
+          "seed": 124604
+        },
+        {
+          "type": "genetic",
+          "generations": 25,
+          "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "mse",
+          "seed": 2446
+        },
+        {
+          "type": "genetic",
+          "generations": 25,
+          "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "mse",
+          "seed": 52644
+        },
+        {
+          "type": "genetic",
+          "generations": 25,
+          "spp": 10,
+          "npm": 0.5,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "mse",
+          "seed": 24604
+        }
+      ]
+    }
+  ]
+}

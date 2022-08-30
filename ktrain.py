@@ -53,7 +53,7 @@ def train_random(dataset, path, name, seed):
     jax.random.PRNGKey(seed)
     kerneldata = {}
 
-    n, d = np.shape(dataset['train_x'])
+    n, d = np.shape(dataset['train_x'] + dataset['valid_x'])
     if not os.path.isdir(path): os.mkdir(path)
     file = path + name + '.npy'
 
@@ -64,7 +64,7 @@ def train_random(dataset, path, name, seed):
         data = np.random.uniform(low=-1.0, high=1.0, size=(n, d))
         kerneldata['K'] = pennylane_projected_quantum_kernel(lambda x, wires: random_quantum_embedding(x, wires, seed), data)
         kerneldata['weights'] = data
-        kerneldata['K_test'] = pennylane_projected_quantum_kernel(lambda x, wires: random_quantum_embedding(x, wires, seed), data, np.array(dataset['test_x']))
+        kerneldata['K_test'] = pennylane_projected_quantum_kernel(lambda x, wires: random_quantum_embedding(x, wires, seed), np.array(dataset['test_x']), data)
         np.save(file, kerneldata)
         print('Kernel ' + name + ' has been generated.')
 

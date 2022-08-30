@@ -28,20 +28,20 @@ d = 10  # number of features
 n = 30  # elements of the dataset
 
 # load data if exists
-if Path('genetic-algorithm-results/X.npy').exists():
-    X = np.load('genetic-algorithm-results/X.npy')
+if Path('old results/genetic-algorithm-results/X.npy').exists():
+    X = np.load('old results/genetic-algorithm-results/X.npy')
 else:
     X = np.random.uniform(low=-1.0, high=1.0, size=(n, d))
-    np.save('genetic-algorithm-results/X.npy', X)
+    np.save('old results/genetic-algorithm-results/X.npy', X)
 
 # load model if exists
 weights_shape = qml.BasicEntanglerLayers.shape(n_layers=1, n_wires=d)
 
-if Path('genetic-algorithm-results/weights.npy').exists():
-    weights = np.load('genetic-algorithm-results/weights.npy')
+if Path('old results/genetic-algorithm-results/weights.npy').exists():
+    weights = np.load('old results/genetic-algorithm-results/weights.npy')
 else:
     weights = np.random.uniform(-np.pi, np.pi, size=weights_shape)
-    np.save('genetic-algorithm-results/weights.npy', weights)
+    np.save('old results/genetic-algorithm-results/weights.npy', weights)
 
 # create quantum system that generates the labels
 @jax.jit
@@ -60,11 +60,11 @@ def generate_label(x):
 
 
 # load label if they exists, otherwise generate them
-if Path('genetic-algorithm-results/y.npy').exists():
-    y = np.load('genetic-algorithm-results/y.npy')
+if Path('old results/genetic-algorithm-results/y.npy').exists():
+    y = np.load('old results/genetic-algorithm-results/y.npy')
 else:
     y = np.array([generate_label(x) for x in X])
-    np.save('genetic-algorithm-results/y.npy', y)
+    np.save('old results/genetic-algorithm-results/y.npy', y)
 
 
 # ====================================================================
@@ -80,26 +80,26 @@ def random_quantum_embedding(x, wires, seed):
 
 print("Calculating random quantum kernel 1...")
 # load label if they exists, otherwise generate them
-if Path('genetic-algorithm-results/random_qk_1.npy').exists():
-    random_qk_1 = np.load('genetic-algorithm-results/random_qk_1.npy')
+if Path('old results/genetic-algorithm-results/random_qk_1.npy').exists():
+    random_qk_1 = np.load('old results/genetic-algorithm-results/random_qk_1.npy')
 else:
     random_qk_1 = pennylane_projected_quantum_kernel(lambda x, wires: random_quantum_embedding(x, wires, 4343), X)
-    np.save('genetic-algorithm-results/random_qk_1.npy', random_qk_1)
+    np.save('old results/genetic-algorithm-results/random_qk_1.npy', random_qk_1)
 
 print("Calculating random quantum kernel 2...")
-if Path('genetic-algorithm-results/random_qk_2.npy').exists():
-    random_qk_2 = np.load('genetic-algorithm-results/random_qk_2.npy')
+if Path('old results/genetic-algorithm-results/random_qk_2.npy').exists():
+    random_qk_2 = np.load('old results/genetic-algorithm-results/random_qk_2.npy')
 else:
     random_qk_2 = pennylane_projected_quantum_kernel(lambda x, wires: random_quantum_embedding(x, wires, 4344), X)
-    np.save('genetic-algorithm-results/random_qk_2.npy', random_qk_2)
+    np.save('old results/genetic-algorithm-results/random_qk_2.npy', random_qk_2)
 
 
 print("Calculating random quantum kernel 3...")
-if Path('genetic-algorithm-results/random_qk_3.npy').exists():
-    random_qk_3 = np.load('genetic-algorithm-results/random_qk_3.npy')
+if Path('old results/genetic-algorithm-results/random_qk_3.npy').exists():
+    random_qk_3 = np.load('old results/genetic-algorithm-results/random_qk_3.npy')
 else:
     random_qk_3 = pennylane_projected_quantum_kernel(lambda x, wires: random_quantum_embedding(x, wires, 4345), X)
-    np.save('genetic-algorithm-results/random_qk_3.npy', random_qk_3)
+    np.save('old results/genetic-algorithm-results/random_qk_3.npy', random_qk_3)
 
 
 random_qk_1_alignment = k_target_alignment(random_qk_1, y)
@@ -116,41 +116,41 @@ print(random_qk_1_alignment, random_qk_2_alignment, random_qk_3_alignment)
 np.random.seed(32323234)
 
 print("Calculating genetic quantum kernel 1...")
-if Path('genetic-algorithm-results/genetic_qk_1.npy').exists():
-    genetic_qk_1 = np.load('genetic-algorithm-results/genetic_qk_1.npy')
+if Path('old results/genetic-algorithm-results/genetic_qk_1.npy').exists():
+    genetic_qk_1 = np.load('old results/genetic-algorithm-results/genetic_qk_1.npy')
 else:
     ge1 = GeneticEmbedding(X, y, X.shape[1], d, num_generations=100, solution_per_population=10)
     ge1.run()
     ge1_best_solution, _, _ = ge1.ga.best_solution()
     print(ge1_best_solution)
     genetic_qk_1 = pennylane_projected_quantum_kernel(lambda x, wires: lambda x, wires: ge1.transform_solution_to_embedding(x, ge1_best_solution), X)
-    np.save('genetic-algorithm-results/genetic_qk_1.npy', genetic_qk_1)
+    np.save('old results/genetic-algorithm-results/genetic_qk_1.npy', genetic_qk_1)
 
 np.random.seed(453535345)
 
 print("Calculating genetic quantum kernel 2...")
-if Path('genetic-algorithm-results/genetic_qk_2.npy').exists():
-    genetic_qk_2 = np.load('genetic-algorithm-results/genetic_qk_2.npy')
+if Path('old results/genetic-algorithm-results/genetic_qk_2.npy').exists():
+    genetic_qk_2 = np.load('old results/genetic-algorithm-results/genetic_qk_2.npy')
 else:
     ge2 = GeneticEmbedding(X, y, X.shape[1], d, num_generations=100, solution_per_population=10)
     ge2.run()
     ge2_best_solution, _, _ = ge2.ga.best_solution()
     print(ge2_best_solution)
     genetic_qk_2 = pennylane_projected_quantum_kernel(lambda x, wires: lambda x, wires: ge2.transform_solution_to_embedding(x, ge2_best_solution), X)
-    np.save('genetic-algorithm-results/genetic_qk_2.npy', genetic_qk_2)
+    np.save('old results/genetic-algorithm-results/genetic_qk_2.npy', genetic_qk_2)
 
 np.random.seed(21113231)
 
 print("Calculating genetic quantum kernel 3...")
-if Path('genetic-algorithm-results/genetic_qk_3.npy').exists():
-    genetic_qk_3 = np.load('genetic-algorithm-results/genetic_qk_3.npy')
+if Path('old results/genetic-algorithm-results/genetic_qk_3.npy').exists():
+    genetic_qk_3 = np.load('old results/genetic-algorithm-results/genetic_qk_3.npy')
 else:
     ge3 = GeneticEmbedding(X, y, X.shape[1], d, num_generations=100, solution_per_population=10)
     ge3.run()
     ge3_best_solution, _, _ = ge3.ga.best_solution()
     print(ge3_best_solution)
     genetic_qk_3 = pennylane_projected_quantum_kernel(lambda x, wires: lambda x, wires: ge3.transform_solution_to_embedding(x, ge2_best_solution), X)
-    np.save('genetic-algorithm-results/genetic_qk_3.npy', genetic_qk_3)
+    np.save('old results/genetic-algorithm-results/genetic_qk_3.npy', genetic_qk_3)
 
 
 genetic_qk_1_alignment = k_target_alignment(genetic_qk_1, y)
@@ -175,18 +175,18 @@ layers = d
 adam_optimizer = optax.adam(learning_rate=0.1)
 epochs = 100
 
-if Path('genetic-algorithm-results/trainable_params_init.npy').exists():
-    params_tentatives = np.load('genetic-algorithm-results/trainable_params_init.npy')
+if Path('old results/genetic-algorithm-results/trainable_params_init.npy').exists():
+    params_tentatives = np.load('old results/genetic-algorithm-results/trainable_params_init.npy')
 else:
     params_1 = jax.random.normal(jax.random.PRNGKey(12345), shape=(layers, 2 * d))
     params_2 = jax.random.normal(jax.random.PRNGKey(12346), shape=(layers, 2 * d))
     params_3 = jax.random.normal(jax.random.PRNGKey(12347), shape=(layers, 2 * d))
     params_tentatives = np.array([params_1, params_2, params_3])
-    np.save('genetic-algorithm-results/trainable_params_init.npy', params_tentatives)
+    np.save('old results/genetic-algorithm-results/trainable_params_init.npy', params_tentatives)
 
 
-if Path('genetic-algorithm-results/trainable_params_end.npy').exists():
-    params_trained = np.load('genetic-algorithm-results/trainable_params_end.npy')
+if Path('old results/genetic-algorithm-results/trainable_params_end.npy').exists():
+    params_trained = np.load('old results/genetic-algorithm-results/trainable_params_end.npy')
 else:
     params_trained = []
 
@@ -208,29 +208,29 @@ else:
             print(".", end="", flush=True)
 
         params_trained.append(params.copy())
-    np.save('genetic-algorithm-results/trainable_params_end.npy', params_trained)
+    np.save('old results/genetic-algorithm-results/trainable_params_end.npy', params_trained)
 
 
 print("Calculating genetic quantum kernel 1...")
-if Path('genetic-algorithm-results/trainable_qk_1.npy').exists():
-    trainable_qk_1 = np.load('genetic-algorithm-results/trainable_qk_1.npy')
+if Path('old results/genetic-algorithm-results/trainable_qk_1.npy').exists():
+    trainable_qk_1 = np.load('old results/genetic-algorithm-results/trainable_qk_1.npy')
 else:
     trainable_qk_1 = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, params_trained[0], wires=wires), X)
-    np.save('genetic-algorithm-results/trainable_qk_1.npy', trainable_qk_1)
+    np.save('old results/genetic-algorithm-results/trainable_qk_1.npy', trainable_qk_1)
 
 print("Calculating genetic quantum kernel 2...")
-if Path('genetic-algorithm-results/trainable_qk_2.npy').exists():
-    trainable_qk_2 = np.load('genetic-algorithm-results/trainable_qk_2.npy')
+if Path('old results/genetic-algorithm-results/trainable_qk_2.npy').exists():
+    trainable_qk_2 = np.load('old results/genetic-algorithm-results/trainable_qk_2.npy')
 else:
     trainable_qk_2 = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, params_trained[1], wires=wires), X)
-    np.save('genetic-algorithm-results/trainable_qk_2.npy', trainable_qk_2)
+    np.save('old results/genetic-algorithm-results/trainable_qk_2.npy', trainable_qk_2)
 
 print("Calculating genetic quantum kernel 3...")
-if Path('genetic-algorithm-results/trainable_qk_3.npy').exists():
-    trainable_qk_3 = np.load('genetic-algorithm-results/trainable_qk_3.npy')
+if Path('old results/genetic-algorithm-results/trainable_qk_3.npy').exists():
+    trainable_qk_3 = np.load('old results/genetic-algorithm-results/trainable_qk_3.npy')
 else:
     trainable_qk_3 = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, params_trained[2], wires=wires), X)
-    np.save('genetic-algorithm-results/trainable_qk_3.npy', trainable_qk_3)
+    np.save('old results/genetic-algorithm-results/trainable_qk_3.npy', trainable_qk_3)
 
 trainable_qk_1_alignment = k_target_alignment(trainable_qk_1, y)
 trainable_qk_2_alignment = k_target_alignment(trainable_qk_2, y)
@@ -255,18 +255,18 @@ adam_optimizer = optax.adam(learning_rate=0.1)
 epochs = 100
 
 print("TRAINING PARAMETERS FULLBATCH")
-if Path('genetic-algorithm-results/trainable_params_init_fullbatch.npy').exists():
-    params_tentatives = np.load('genetic-algorithm-results/trainable_params_init_fullbatch.npy')
+if Path('old results/genetic-algorithm-results/trainable_params_init_fullbatch.npy').exists():
+    params_tentatives = np.load('old results/genetic-algorithm-results/trainable_params_init_fullbatch.npy')
 else:
     params_1 = jax.random.normal(jax.random.PRNGKey(12345), shape=(layers, 2 * d))
     params_2 = jax.random.normal(jax.random.PRNGKey(12346), shape=(layers, 2 * d))
     params_3 = jax.random.normal(jax.random.PRNGKey(12347), shape=(layers, 2 * d))
     params_tentatives = np.array([params_1, params_2, params_3])
-    np.save('genetic-algorithm-results/trainable_params_init_fullbatch.npy', params_tentatives)
+    np.save('old results/genetic-algorithm-results/trainable_params_init_fullbatch.npy', params_tentatives)
 
 
-if Path('genetic-algorithm-results/trainable_params_end_fullbatch.npy').exists():
-    params_trained = np.load('genetic-algorithm-results/trainable_params_end_fullbatch.npy')
+if Path('old results/genetic-algorithm-results/trainable_params_end_fullbatch.npy').exists():
+    params_trained = np.load('old results/genetic-algorithm-results/trainable_params_end_fullbatch.npy')
 else:
     params_trained = []
 
@@ -287,29 +287,29 @@ else:
             print(".", end="", flush=True)
 
         params_trained.append(params.copy())
-    np.save('genetic-algorithm-results/trainable_params_end_fullbatch.npy', params_trained)
+    np.save('old results/genetic-algorithm-results/trainable_params_end_fullbatch.npy', params_trained)
 
 
 print("Calculating TRAINABLE FULL BATCH quantum kernel 1...")
-if Path('genetic-algorithm-results/trainable_qk_fb_1.npy').exists():
-    trainable_qk_1 = np.load('genetic-algorithm-results/trainable_qk_fb_1.npy')
+if Path('old results/genetic-algorithm-results/trainable_qk_fb_1.npy').exists():
+    trainable_qk_1 = np.load('old results/genetic-algorithm-results/trainable_qk_fb_1.npy')
 else:
     trainable_qk_1 = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, params_trained[0], wires=wires), X)
-    np.save('genetic-algorithm-results/trainable_qk_fb_1.npy', trainable_qk_1)
+    np.save('old results/genetic-algorithm-results/trainable_qk_fb_1.npy', trainable_qk_1)
 
 print("Calculating TRAINABLE FULL BATCH quantum kernel 2...")
-if Path('genetic-algorithm-results/trainable_qk_fb_2.npy').exists():
-    trainable_qk_2 = np.load('genetic-algorithm-results/trainable_qk_fb_2.npy')
+if Path('old results/genetic-algorithm-results/trainable_qk_fb_2.npy').exists():
+    trainable_qk_2 = np.load('old results/genetic-algorithm-results/trainable_qk_fb_2.npy')
 else:
     trainable_qk_2 = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, params_trained[1], wires=wires), X)
-    np.save('genetic-algorithm-results/trainable_qk_fb_2.npy', trainable_qk_2)
+    np.save('old results/genetic-algorithm-results/trainable_qk_fb_2.npy', trainable_qk_2)
 
 print("Calculating TRAINABLE FULL BATCH quantum kernel 3...")
-if Path('genetic-algorithm-results/trainable_qk_fb_3.npy').exists():
-    trainable_qk_3 = np.load('genetic-algorithm-results/trainable_qk_fb_3.npy')
+if Path('old results/genetic-algorithm-results/trainable_qk_fb_3.npy').exists():
+    trainable_qk_3 = np.load('old results/genetic-algorithm-results/trainable_qk_fb_3.npy')
 else:
     trainable_qk_3 = pennylane_projected_quantum_kernel(lambda x, wires: trainable_embedding(x, params_trained[2], wires=wires), X)
-    np.save('genetic-algorithm-results/trainable_qk_fb_3.npy', trainable_qk_3)
+    np.save('old results/genetic-algorithm-results/trainable_qk_fb_3.npy', trainable_qk_3)
 
 trainable_qk_1_alignment = k_target_alignment(trainable_qk_1, y)
 trainable_qk_2_alignment = k_target_alignment(trainable_qk_2, y)
@@ -327,15 +327,15 @@ print(trainable_qk_1_alignment, trainable_qk_2_alignment, trainable_qk_3_alignme
 np.random.seed(574534)
 
 print("Calculating genetic quantum kernel 1 FULL BATCH...")
-if Path('genetic-algorithm-results/genetic_qk_1_fullbatch.npy').exists():
-    genetic_fb_qk_1 = np.load('genetic-algorithm-results/genetic_qk_1_fullbatch.npy')
+if Path('old results/genetic-algorithm-results/genetic_qk_1_fullbatch.npy').exists():
+    genetic_fb_qk_1 = np.load('old results/genetic-algorithm-results/genetic_qk_1_fullbatch.npy')
 else:
     ge1_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
     ge1_fb.run()
     ge1_fb_best_solution, ge1_fb_best_solution_fitness, idx = ge1_fb.ga.best_solution()
     the_feature_map = lambda x, wires: ge1_fb.transform_solution_to_embedding(x, ge1_fb_best_solution)
     the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
-    np.save('genetic-algorithm-results/genetic_qk_1_fullbatch.npy', the_gram_matrix)
+    np.save('old results/genetic-algorithm-results/genetic_qk_1_fullbatch.npy', the_gram_matrix)
 
 
 #print("Calculating genetic quantum kernel 2 FULL BATCH...")
@@ -354,15 +354,15 @@ genetic_fb_qk_2 = genetic_fb_qk_1
 np.random.seed(97979797)
 
 print("Calculating genetic quantum kernel 3 FULL BATCH...")
-if Path('genetic-algorithm-results/genetic_qk_3_fullbatch.npy').exists():
-    genetic_fb_qk_2 = np.load('genetic-algorithm-results/genetic_qk_3_fullbatch.npy')
+if Path('old results/genetic-algorithm-results/genetic_qk_3_fullbatch.npy').exists():
+    genetic_fb_qk_2 = np.load('old results/genetic-algorithm-results/genetic_qk_3_fullbatch.npy')
 else:
     ge3_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
     ge3_fb.run()
     ge3_fb_best_solution, ge3_fb_best_solution_fitness, idx = ge3_fb.ga.best_solution()
     the_feature_map = lambda x, wires: ge3_fb.transform_solution_to_embedding(x, ge3_fb_best_solution)
     the_gram_matrix = pennylane_projected_quantum_kernel(the_feature_map, X)
-    np.save('genetic-algorithm-results/genetic_qk_3_fullbatch.npy', the_gram_matrix)
+    np.save('old results/genetic-algorithm-results/genetic_qk_3_fullbatch.npy', the_gram_matrix)
     genetic_fb_qk_3 = the_gram_matrix
 
 
@@ -395,11 +395,11 @@ else:
 import matplotlib.pyplot as plt
 from datetime import datetime
 
-ga1_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_1.npy')
+ga1_fb_fitnesses = np.load('old results/genetic-algorithm-results/ga_fitness_fullbatch_1.npy')
 ga1_fb_fitnesses_per_iter = [ga1_fb_fitnesses[i*10:i*10+10] for i in range(51)]
-ga2_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_2.npy')
+ga2_fb_fitnesses = np.load('old results/genetic-algorithm-results/ga_fitness_fullbatch_2.npy')
 ga2_fb_fitnesses_per_iter = [ga2_fb_fitnesses[i*10:i*10+10] for i in range(51)]
-ga3_fb_fitnesses = np.load('genetic-algorithm-results/ga_fitness_fullbatch_3.npy')
+ga3_fb_fitnesses = np.load('old results/genetic-algorithm-results/ga_fitness_fullbatch_3.npy')
 ga3_fb_fitnesses_per_iter = [ga3_fb_fitnesses[i*10:i*10+10] for i in range(51)]
 genetic_fb_qk_1_alignment = k_target_alignment(genetic_fb_qk_1, y)
 genetic_fb_qk_2_alignment = k_target_alignment(genetic_fb_qk_2, y)

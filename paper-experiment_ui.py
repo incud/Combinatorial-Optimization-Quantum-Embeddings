@@ -43,6 +43,8 @@ def conf_process(file):
     datanames = []
     count = 0
 
+    if not os.path.isdir(res_dir): os.mkdir(res_dir)
+
     for dts in datasets:
         flag, name = generate_data(dts, res_dir)
         if flag:

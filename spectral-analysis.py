@@ -13,7 +13,7 @@ from quask.metrics import calculate_generalization_accuracy
 
 from utils import *
 
-res_dir = 'genetic-algorithm-results'
+res_dir = 'old results/genetic-algorithm-results'
 
 # ====================================================================
 # ==================== LOAD DATASETS ====================
@@ -41,9 +41,9 @@ random_qk_3 = np.load(res_dir + '/random_qk_3.npy') if Path(res_dir + '/random_q
 random_qk_1_spectrum = np.linalg.eigvals(random_qk_1)
 random_qk_2_spectrum = np.linalg.eigvals(random_qk_2)
 random_qk_3_spectrum = np.linalg.eigvals(random_qk_3)
-np.save('genetic-algorithm-results/random_qk_1_spectrum.npy', random_qk_1_spectrum)
-np.save('genetic-algorithm-results/random_qk_2_spectrum.npy', random_qk_2_spectrum)
-np.save('genetic-algorithm-results/random_qk_3_spectrum.npy', random_qk_3_spectrum)
+np.save('old results/genetic-algorithm-results/random_qk_1_spectrum.npy', random_qk_1_spectrum)
+np.save('old results/genetic-algorithm-results/random_qk_2_spectrum.npy', random_qk_2_spectrum)
+np.save('old results/genetic-algorithm-results/random_qk_3_spectrum.npy', random_qk_3_spectrum)
 
 random_qk_1_alignment = k_target_alignment(random_qk_1, y)
 random_qk_2_alignment = k_target_alignment(random_qk_2, y)
@@ -64,9 +64,9 @@ genetic_qk_3 = np.load(res_dir + '/genetic_qk_3.npy') if Path(res_dir + '/geneti
 genetic_qk_1_spectrum = np.linalg.eigvals(genetic_qk_1)
 genetic_qk_2_spectrum = np.linalg.eigvals(genetic_qk_2)
 genetic_qk_3_spectrum = np.linalg.eigvals(genetic_qk_3)
-np.save('genetic-algorithm-results/genetic_qk_1_spectrum.npy', genetic_qk_1_spectrum)
-np.save('genetic-algorithm-results/genetic_qk_2_spectrum.npy', genetic_qk_2_spectrum)
-np.save('genetic-algorithm-results/genetic_qk_3_spectrum.npy', genetic_qk_3_spectrum)
+np.save('old results/genetic-algorithm-results/genetic_qk_1_spectrum.npy', genetic_qk_1_spectrum)
+np.save('old results/genetic-algorithm-results/genetic_qk_2_spectrum.npy', genetic_qk_2_spectrum)
+np.save('old results/genetic-algorithm-results/genetic_qk_3_spectrum.npy', genetic_qk_3_spectrum)
 
 
 genetic_qk_1_alignment = k_target_alignment(genetic_qk_1, y)
@@ -89,9 +89,9 @@ trainable_qk_3 = np.load(res_dir + '/trainable_qk_3.npy') if Path(res_dir + '/tr
 trainable_qk_1_spectrum = np.linalg.eigvals(trainable_qk_1)
 trainable_qk_2_spectrum = np.linalg.eigvals(trainable_qk_2)
 trainable_qk_3_spectrum = np.linalg.eigvals(trainable_qk_3)
-np.save('genetic-algorithm-results/trainable_qk_1_spectrum.npy', trainable_qk_1_spectrum)
-np.save('genetic-algorithm-results/trainable_qk_2_spectrum.npy', trainable_qk_2_spectrum)
-np.save('genetic-algorithm-results/trainable_qk_3_spectrum.npy', trainable_qk_3_spectrum)
+np.save('old results/genetic-algorithm-results/trainable_qk_1_spectrum.npy', trainable_qk_1_spectrum)
+np.save('old results/genetic-algorithm-results/trainable_qk_2_spectrum.npy', trainable_qk_2_spectrum)
+np.save('old results/genetic-algorithm-results/trainable_qk_3_spectrum.npy', trainable_qk_3_spectrum)
 
 trainable_qk_1_alignment = k_target_alignment(trainable_qk_1, y)
 trainable_qk_2_alignment = k_target_alignment(trainable_qk_2, y)
@@ -113,9 +113,9 @@ trainable_qk_fb_3 = np.load(res_dir + '/trainable_qk_fb_3.npy') if Path(res_dir 
 trainable_fb_qk_1_spectrum = np.linalg.eigvals(trainable_qk_fb_1)
 trainable_fb_qk_2_spectrum = np.linalg.eigvals(trainable_qk_fb_2)
 trainable_fb_qk_3_spectrum = np.linalg.eigvals(trainable_qk_fb_3)
-np.save('genetic-algorithm-results/trainable_fb_qk_1_spectrum.npy', trainable_fb_qk_1_spectrum)
-np.save('genetic-algorithm-results/trainable_fb_qk_2_spectrum.npy', trainable_fb_qk_2_spectrum)
-np.save('genetic-algorithm-results/trainable_fb_qk_3_spectrum.npy', trainable_fb_qk_3_spectrum)
+np.save('old results/genetic-algorithm-results/trainable_fb_qk_1_spectrum.npy', trainable_fb_qk_1_spectrum)
+np.save('old results/genetic-algorithm-results/trainable_fb_qk_2_spectrum.npy', trainable_fb_qk_2_spectrum)
+np.save('old results/genetic-algorithm-results/trainable_fb_qk_3_spectrum.npy', trainable_fb_qk_3_spectrum)
 
 trainable_qk_fb_1_alignment = k_target_alignment(trainable_qk_1, y)
 trainable_qk_fb_2_alignment = k_target_alignment(trainable_qk_2, y)
@@ -133,9 +133,9 @@ genetic_fb_qk_3 = np.load(res_dir + '/genetic_qk_3_fullbatch.npy') if Path(res_d
 genetic_fb_qk_1_spectrum = np.linalg.eigvals(genetic_fb_qk_1)
 genetic_fb_qk_2_spectrum = np.linalg.eigvals(genetic_fb_qk_2)
 genetic_fb_qk_3_spectrum = np.linalg.eigvals(genetic_fb_qk_3)
-np.save('genetic-algorithm-results/genetic_fb_qk_1_spectrum.npy', genetic_fb_qk_1_spectrum)
-np.save('genetic-algorithm-results/genetic_fb_qk_2_spectrum.npy', genetic_fb_qk_2_spectrum)
-np.save('genetic-algorithm-results/genetic_fb_qk_3_spectrum.npy', genetic_fb_qk_3_spectrum)
+np.save('old results/genetic-algorithm-results/genetic_fb_qk_1_spectrum.npy', genetic_fb_qk_1_spectrum)
+np.save('old results/genetic-algorithm-results/genetic_fb_qk_2_spectrum.npy', genetic_fb_qk_2_spectrum)
+np.save('old results/genetic-algorithm-results/genetic_fb_qk_3_spectrum.npy', genetic_fb_qk_3_spectrum)
 
 genetic_fb_qk_1_alignment = k_target_alignment(genetic_fb_qk_1, y)
 genetic_fb_qk_2_alignment = k_target_alignment(genetic_fb_qk_2, y)
