@@ -6,37 +6,76 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 import matplotlib.pyplot as plt
+import seaborn as sns
 from utils import *
+
+# scatter plot of accuracy and variance
+def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
+    res_dict = {}
+    acc_name = ''
+
+
+    f = plt.figure()
+    f.set_figwidth(15)
+    f.set_figheight(15)
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+
+    for k in kernels.keys():
+        key = compute_key(k, differentiate, 'kernel')
+
+        if key in res_dict.keys():
+            res_dict[key]['kernels'].append(kernels[k])
+        else:
+            res_dict[key] = {}
+            res_dict[key]['kernels'] = [kernels[k]]
+
+    labels = []
+    res = {}
+    min_size = np.inf
+    for k in res_dict.keys():
+        if min_size > len(res_dict[k]['kernels']): min_size = len(res_dict[k]['kernels'])
+
+    count = 0
+    reskeys = [ k for k in res_dict.keys()]
+    reskeys.sort()
+    for k in reskeys:
+        res[k] = []
+        labels.append(k)
+        for i in range(min_size):
+            if len(res) != 0:
+                res[k] = res[k] + np.linalg.eigvals(res_dict[k]['kernels'][i]['K']).tolist()
+            else:
+                res[k] = np.linalg.eigvals(res_dict[k]['kernels'][i]['K']).tolist()
+        count +=1
+
+
+    # Density Plot with Rug Plot
+    gfg = sns.displot(res, kind="kde", bw_method=0.2, rug=True, height=5, aspect=1.5)
+    gfg.set_axis_labels('Eigenvalues', 'Density')
+    gfg.tight_layout()
+    sns.move_legend(gfg, "upper right", bbox_to_anchor=(.8, .9))
+    plt.setp(gfg._legend.get_texts(), fontsize=8)
+
+    path = res_dir + '/' + dataset + '/plots'
+    if not os.path.isdir(path): os.mkdir(path)
+    plt.savefig(path + '/eigenvalues_density_' + differentiate + '.png')
+    plt.clf()
+
 
 
 # scatter plot of accuracy and variance
 def plot_scatter_accuracy_variance(kernels, dataset, y_train, y_test, type = 'mse', differentiate = 'kernel'):
-
     res_dict = {}
+    acc_name = ''
+    plt.figure()
+    for k in kernels.keys():
+        key = compute_key(k, differentiate, 'kernel')
 
-    if differentiate == 'kernel':
-        for k in kernels.keys():
-            key = k.split('_')[0]
-            if key in res_dict.keys():
-                res_dict[key]['kernels'].append(kernels[k])
-            else:
-                res_dict[key] = {}
-                res_dict[key]['kernels'] = [kernels[k]]
-
-    elif differentiate == 'all':
-        for k in kernels.keys():
-            if k.split('_')[0] == 'genetic':
-                key = k.split('_')[0] + ' ' + k.split('_')[5] + ' threshold (' + k.split('_')[6] + ')'
-            elif k.split('_')[0] == 'trainable':
-                key = k.split('_')[0] + ' (' + k.split('_')[2] + ')'
-            elif k.split('_')[0] == 'random':
-                key = k.split('_')[0]
-
-            if key in res_dict.keys():
-                res_dict[key]['kernels'].append(kernels[k])
-            else:
-                res_dict[key] = {}
-                res_dict[key]['kernels'] = [kernels[k]]
+        if key in res_dict.keys():
+            res_dict[key]['kernels'].append(kernels[k])
+        else:
+            res_dict[key] = {}
+            res_dict[key]['kernels'] = [kernels[k]]
 
     for k in res_dict.keys():
         res_dict[k]['accuracy'] = []
@@ -49,18 +88,18 @@ def plot_scatter_accuracy_variance(kernels, dataset, y_train, y_test, type = 'ms
             acc_name = 'Negative Mean Squared Error'
             for kernel in res_dict[k]['kernels']:
                 res_dict[k]['accuracy'].append(accuracy_svr(kernel['K'], kernel['K_test'], y_train, y_test))
-        else:
+        elif type == 'kta':
             pass
-            # acc_name = 'Kernel-Target Alignment'
-            # for kernel in []:
-            #     res_dict[k]['accuracy'].append()
+            acc_name = 'Kernel-Target Alignment (Training)'
+            for kernel in res_dict[k]['kernels']:
+                res_dict[k]['accuracy'].append(k_target_alignment(kernel['K'], np.array(y_train)))
 
     keys = list(res_dict.keys())
     keys.sort()
     for k in keys:
         plt.scatter(res_dict[k]['accuracy'], res_dict[k]['variance'], label = k)
 
-    plt.title('Dataset: ' + dataset , fontweight='bold', fontsize=20)
+    plt.title('Dataset: ' + compute_key(dataset, 'all', 'dataset'), fontsize=20)
     plt.xlabel(acc_name, fontsize=15)
     plt.ylabel('Variance', fontsize=15)
     plt.legend(prop={'size': 6})
@@ -113,17 +152,38 @@ def conf_process(file):
     print('\n##### DATASETS AND KERNELS LOADED #####')
 
 
+
+
     print('\n##### GA-HYPERPARAMETER ANALYSIS COMPLETED #####\n')
+
+
+
+    for data in kernels.keys():
+        plot_kernels_eigenvalues(kernels[data], data)
+        plot_kernels_eigenvalues(kernels[data], data, differentiate='all')
 
     print('\n##### SPECTRAL ANALYSIS COMPLETED #####\n')
 
+
+
+
     print('\n##### GRAM MATRICES ANALYSIS COMPLETED #####\n')
+
+
 
     for data in kernels.keys():
         plot_scatter_accuracy_variance(kernels[data], data, datasets[data]['train_y'] + datasets[data]['valid_y'], datasets[data]['test_y'])
         plot_scatter_accuracy_variance(kernels[data], data, datasets[data]['train_y'] + datasets[data]['valid_y'], datasets[data]['test_y'], differentiate = 'all')
+        plot_scatter_accuracy_variance(kernels[data], data, datasets[data]['train_y'] + datasets[data]['valid_y'],
+                                       datasets[data]['test_y'], type = 'kta')
+        plot_scatter_accuracy_variance(kernels[data], data, datasets[data]['train_y'] + datasets[data]['valid_y'],
+                                       datasets[data]['test_y'], type = 'kta', differentiate='all')
 
     print('\n##### PERFORMANCE ANALYSIS COMPLETED #####\n')
+
+
+
+    print('\n##### CIRCUITS REPRESENTATION GENERATED #####\n')
 
 
 def main(conf=False, file=None):
