@@ -1,23 +1,16 @@
-import datetime
-
-import jax
-from jax.config import config
-
-config.update("jax_enable_x64", True)
-import pennylane as qml
 import numpy as np
+import jax
 import jax.numpy as jnp
+from jax.config import config
+import pennylane as qml
 import optax
 from quask.template_pennylane import pennylane_projected_quantum_kernel, hardware_efficient_ansatz, GeneticEmbedding
 from pathlib import Path
-import quask
+import datetime
 
+# reproducibility results
 np.random.seed(123456)
 
-def k_target_alignment(K, y):
-    B = jnp.outer(y, y)
-    norm = jnp.sqrt(jnp.sum(K * K) * jnp.sum(B * B))
-    return jnp.sum(K * B) / norm
 
 # ====================================================================
 # ==================== GENERATE SYNTHETIC DATASET ====================
@@ -355,7 +348,7 @@ np.random.seed(97979797)
 
 print("Calculating genetic quantum kernel 3 FULL BATCH...")
 if Path('genetic-algorithm-results/genetic_qk_3_fullbatch.npy').exists():
-    genetic_fb_qk_2 = np.load('genetic-algorithm-results/genetic_qk_3_fullbatch.npy')
+    genetic_fb_qk_3 = np.load('genetic-algorithm-results/genetic_qk_3_fullbatch.npy')
 else:
     ge3_fb = GeneticEmbedding(X, y, X.shape[1], d, num_generations=50, solution_per_population=10)
     ge3_fb.run()
