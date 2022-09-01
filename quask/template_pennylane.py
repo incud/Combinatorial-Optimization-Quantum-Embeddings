@@ -2,10 +2,13 @@
 Module dedicated to define Templates for Pennylane quantum circuits.
 See https://pennylane.readthedocs.io/en/stable/introduction/templates.html for details.
 """
-
+import sys
 
 import jax
 from jax.config import config
+from scipy.stats import norm
+from sklearn.metrics import mean_squared_error
+from sklearn.svm import SVR
 
 import quask.metrics
 
@@ -24,8 +27,8 @@ from .metrics import (
 from scipy.linalg import expm
 import bisect
 import matplotlib.pyplot as plt
-from datetime import datetime
-
+from datetime import datetime, timedelta
+import time
 
 
 def rx_embedding(x, wires):
@@ -579,14 +582,21 @@ class GeneticEmbedding:
     PAULIS = [sigma_id, sigma_x, sigma_y, sigma_z]
     N_PAULIS = 4
 
-    def __init__(self, X, y, n_qubits, layers, bandwidth=1.0,
+    def __init__(self, X, y, n_qubits, layers, kernel_concentration_threshold,
+                 bandwidth=1.0,
                  num_generations=50,
-                 num_parents_mating=4,
+                 num_parents_mating=5,
                  solution_per_population=4,
                  parent_selection_type="sss",
                  crossover_type="single_point",
                  mutation_type="random",
-                 mutation_percent_genes=10):
+                 mutation_percent_genes=10,
+                 fitness_mode='kta',
+                 validation_X = None,
+                 validation_y = None,
+                 initial_population = None,
+                 threshold_mode = 'constant',
+                 verbose = True):
         self.X = X
         self.y = y
         self.n_features = len(X[0])
@@ -595,10 +605,103 @@ class GeneticEmbedding:
         self.range_gene = self.N_PAULIS * self.N_PAULIS * len(self.operations)
         self.bandwidth = bandwidth
         self.n_qubits = n_qubits
+        self.fitness_mode = fitness_mode
+        self.kernel_concentration_threshold = kernel_concentration_threshold
         self.layers = layers
         self.num_generations = num_generations
         self.num_parents_mating = num_parents_mating
         self.solution_per_population = solution_per_population
+        self.validation_X = validation_X
+        self.validation_y = validation_y
+        self.variance_idxs = [[],[]]
+        self.low_variance_list = []
+        self.initial_population = initial_population
+        self.verbose = verbose
+        self.start = time.process_time()
+        self.count = 0
+        self.threshold_mode = threshold_mode
+        self.all_variance_list = []
+
+        def prep_variance_computation():
+            n = np.shape(self.X)[0]
+            self.variance_idxs = [[],[]]
+            idxs = np.random.choice(range(int((n*(n-1))/2)), int(np.log2(n*n)), replace = False)
+            for i in idxs:
+                row = 0
+                column = n - 1
+                c = column
+                while i > c and c != int((n*(n-1))/2)-1:
+                    column -= 1
+                    row += 1
+                    c += column
+                self.variance_idxs[0].append(row)
+                self.variance_idxs[1].append(n + i - c - 1)
+            self.low_variance_list.append([])
+
+        def on_start(ga_instance):
+            prep_variance_computation()
+            self.start = time.process_time()
+            if self.verbose == True:
+                print('S', end='\n', flush=True)
+
+        def on_fitness(ga_instance, population_fitness):
+
+            def update_threshold(variance_list):
+                mean = np.mean(variance_list)
+                std_dev = np.std(variance_list)
+                prob = 1 - self.num_parents_mating/self.solution_per_population
+                self.kernel_concentration_threshold = norm.ppf(prob, loc=mean, scale=std_dev)
+
+            prep_variance_computation()
+            if self.threshold_mode == 'adaptive': update_threshold(self.all_variance_list)
+            self.all_variance_list = []
+            end = time.process_time()
+            self.count += 1
+            if self.verbose == True:
+                print(self.low_variance_list[len(self.low_variance_list) - 2])
+                print(f'F:{np.min(population_fitness)}-{np.max(population_fitness)} ', end='', flush=True)
+            elif self.verbose == 'minimal':
+                max_var = '*'
+                if self.low_variance_list[len(self.low_variance_list) - 2]: max_var = str(max(self.low_variance_list[len(self.low_variance_list) - 2]))
+                sys.stdout.write('\033[K' + 'Remaining generation: ' + str(self.num_generations - self.count) +
+                                 ' --- Max fitness: ' + str(np.max(population_fitness)) +
+                                 ' --- Max variance (excluded samples): ' + max_var +
+                                 ' --- Estimated time left: ' + str(timedelta(seconds=(self.num_generations - self.count) * (end - self.start) / self.count)) +
+                                 ' ')
+
+        def on_parents(ga_instance, selected_parents):
+            if self.verbose == True:
+                print('P', end='', flush=True)
+                print(len(selected_parents))
+            elif self.verbose == 'minimal':
+                sys.stdout.write('P')
+
+        def on_crossover(ga_instance, offspring_crossover):
+            if self.verbose == True:
+                print('C', end='', flush=True)
+                print(len(offspring_crossover))
+            elif self.verbose == 'minimal':
+                sys.stdout.write('C')
+
+        def on_mutation(ga_instance, offspring_mutation):
+            if self.verbose == True:
+                print('M', end='', flush=True)
+                print(len(offspring_mutation))
+            elif self.verbose == 'minimal':
+                sys.stdout.write('M')
+
+        def on_generation(ga_instance):
+            if self.verbose == True:
+                print('G', end='\n', flush=True)
+                print(len(ga_instance.population))
+            elif self.verbose == 'minimal':
+                sys.stdout.write('G\r')
+
+        def on_stop(ga_instance, last_population_fitness):
+            self.count = 0
+            if self.verbose == True:
+                print('X', end='\n', flush=True)
+
         self.ga = pygad.GA(
             fitness_func=lambda sol, sol_idx: self.fitness(sol, sol_idx),
             num_genes=self.get_genes(),
@@ -616,13 +719,14 @@ class GeneticEmbedding:
             mutation_percent_genes=mutation_percent_genes,
             save_solutions=True,
             save_best_solutions=True,
-            on_start=(lambda _: print('S', end='\n', flush=True)),
-            on_fitness=(lambda _, pop_fit: print(f'F:{np.min(pop_fit)}-{np.max(pop_fit)} ', end='', flush=True)),
-            on_parents=(lambda _, __: print('P ', end='', flush=True)),
-            on_crossover=(lambda _, __: print('C ', end='', flush=True)),
-            on_mutation=(lambda _, __: print('M ', end='', flush=True)),
-            on_generation=(lambda _: print('G', end='\n', flush=True)),
-            on_stop=(lambda _, __: print('X', end='\n', flush=True))
+            initial_population=initial_population,
+            on_start=on_start,
+            on_fitness=on_fitness,
+            on_parents=on_parents,
+            on_crossover=on_crossover,
+            on_mutation=on_mutation,
+            on_generation=on_generation,
+            on_stop=on_stop
         )
 
     def create_operations(self, include_inverse=False, constant_ticks=4):
@@ -654,21 +758,55 @@ class GeneticEmbedding:
         return self.range_operation
 
     def fitness(self, solution, solution_idx):
+
+        # compute accuracy for regression tasks
+        def accuracy_svr(gram, gram_test, y, y_test):
+            svm = SVR(kernel='precomputed').fit(gram, y)
+            y_predict = svm.predict(gram_test)
+            return -mean_squared_error(y_test, y_predict)
+
+        # compute variance of pre-selected gram matrix entries
+        def compute_variance(feat_map, X_1, X_2, params=[1.0]):
+            var_list = []
+            X_1_proj = projected_xyz_embedding(feat_map, X_1)
+            X_2_proj = projected_xyz_embedding(feat_map, X_2)
+            gamma = params[0]
+            for i in range(X_1_proj.shape[0]):
+                value = np.exp(-gamma * ((X_1_proj[i] - X_2_proj[i]) ** 2).sum())
+                var_list.append(value)
+            return np.var(var_list)
+
         feature_map = lambda x, wires: self.transform_solution_to_embedding(x, solution)
+        X_batch = self.X
+        y_batch = self.y
 
-        # index = np.random.choice(self.X.shape[0], batch, replace=False)
-        X_batch = self.X  # [index]
-        y_batch = self.y  # [index]
+        variance = compute_variance(feature_map, X_batch[self.variance_idxs[0]], X_batch[self.variance_idxs[1]])
+        self.all_variance_list.append(variance)
+        if self.verbose == True : print(variance)
+        if variance < self.kernel_concentration_threshold:
+            self.low_variance_list[len(self.low_variance_list) - 1].append(variance)
+            if self.verbose == True: print('Low variance, discarted')
+            return -np.inf
 
+        if self.verbose == True : print('High variance...')
         gram_matrix = pennylane_projected_quantum_kernel(feature_map, X_batch)
-        fitness = quask.metrics.calculate_kernel_target_alignment(gram_matrix, y_batch)
+
+        if self.fitness_mode == 'mse':
+            if self.validation_X is None or self.validation_y is None:
+                fitness = accuracy_svr(gram_matrix, gram_matrix, y_batch, y_batch)
+            else:
+                gram_matrix_validation = pennylane_projected_quantum_kernel(feature_map, self.validation_X, X_batch)
+                fitness = accuracy_svr(gram_matrix, gram_matrix_validation, y_batch, self.validation_y)
+        else:
+            fitness = quask.metrics.calculate_kernel_target_alignment(gram_matrix, y_batch)
+
         return fitness
 
     def run(self):
         self.ga.run()
         self.ga.plot_fitness()
         best_solution, best_solution_fitness, _ = self.ga.best_solution()
-        print(f"Best solution: {best_solution} fitness={best_solution_fitness}")
+        if self.verbose == True: print(f"Best solution: {best_solution} fitness={best_solution_fitness}")
         plt.savefig(f'fitness_{datetime.now().strftime("%y%m%d_%H%M%S")}.png')
         plt.clf()
 
