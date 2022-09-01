@@ -82,21 +82,25 @@ class CombinatorialKernelSimulatedAnnealingTraining(simanneal.Annealer):
             kernel_values.append(inner_product)
         return np.var(kernel_values), kernel_values
 
-    def estimate_mse(self):
-        training_gram = self.get_kernel_values(self.X_train)
-        validation_gram = self.get_kernel_values(self.X_validation, self.X_train)
+    def estimate_mse(self, solution=None, X_test=None, y_test=None):
+        X_test = self.X_validation if X_test is None else X_test
+        y_test = self.y_validation if y_test is None else y_test
+        training_gram = self.get_kernel_values(self.X_train, solution=solution)
+        validation_gram = self.get_kernel_values(X_test, self.X_train, solution=solution)
         svr = SVR()
         svr.fit(training_gram, self.y_train.ravel())
         y_pred = svr.predict(validation_gram)
-        return mean_squared_error(self.y_validation.ravel(), y_pred.ravel())
+        return mean_squared_error(y_test.ravel(), y_pred.ravel())
 
-    def get_kernel_values(self, X1, X2=None):
+    def get_kernel_values(self, X1, X2=None, solution=None, bandwidth=None):
+        solution = self.state if solution is None else solution
+        bandwidth = 1.0 if bandwidth is None else bandwidth
         if X2 is None:
-            M = self.X_train.shape[0]
-            kernel_gram = np.eye(M)
-            for i in range(M):
-                for j in range(i + 1, M):
-                    value = self.combinatorial_kernel(X1[i], X1[j], self.state, 1.0)
+            m = self.X_train.shape[0]
+            kernel_gram = np.eye(m)
+            for i in range(m):
+                for j in range(i + 1, m):
+                    value = self.combinatorial_kernel(X1[i], X1[j], solution, bandwidth)
                     kernel_gram[i][j] = value
                     kernel_gram[j][i] = value
                     print(".", end="")
@@ -104,6 +108,6 @@ class CombinatorialKernelSimulatedAnnealingTraining(simanneal.Annealer):
             kernel_gram = np.zeros(shape=(len(X1), len(X2)))
             for i in range(len(X1)):
                 for j in range(len(X2)):
-                    kernel_gram[i][j] = self.combinatorial_kernel(X1[i], X2[j], self.state, 1.0)
+                    kernel_gram[i][j] = self.combinatorial_kernel(X1[i], X2[j], solution, bandwidth)
                     print(".", end="")
         return kernel_gram

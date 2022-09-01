@@ -24,8 +24,8 @@ def create_operation(n_qubits, n_layers, index, pauli, angle):
 
 
 def create_identity_combinatorial_kernel(n_qubits, n_layers):
-    n_operations = n_qubits * 2 * n_layers
-    return np.zeros(shape=(n_operations, 2))
+    n_gates = n_qubits * 2 * n_layers
+    return np.zeros(shape=(n_gates, 2))
 
 
 def create_random_combinatorial_kernel(n_qubits, n_layers, n_operations):
@@ -33,13 +33,13 @@ def create_random_combinatorial_kernel(n_qubits, n_layers, n_operations):
     return np.stack((
         np.random.randint(0, 16, size=(n_gates,)),
         np.random.randint(0, n_operations, size=(n_gates,))
-    ))
+    )).reshape((n_gates, 2))
 
 
 def CombinatorialFeatureMap(x, n_qubits, n_layers, solution, bandwidth):
 
     n_gates = n_qubits * 2 * n_layers
-    assert solution.shape == (n_gates, 2)
+    assert solution.shape == (n_gates, 2), f"Shape is {solution.shape} instead of {(n_gates, 2)}"
     for index in range(n_gates):
         pauli = solution[index][0]
         operation_idx = solution[index][1]
