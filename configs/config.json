@@ -3,7 +3,7 @@
   "experiments": [
     {
       "dataset": {
-        "type": "synt",
+        "type": "cancer",
         "samples": 15,
         "features": 5,
         "seed": 12347,

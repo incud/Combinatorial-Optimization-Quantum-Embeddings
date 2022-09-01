@@ -16,6 +16,22 @@ import numpy.linalg as la
 
 
 
+# function to split dataset in training and test
+def list_train_test_split(X, y, n_test, seed):
+    np.random.seed(seed)
+    jax.random.PRNGKey(seed)
+
+    idxs_test = np.random.choice(len(X), n_test, replace=False)
+
+    train_x = [X[i] for i in range(len(X)) if i not in idxs_test]
+    train_y = [y[i] for i in range(len(X)) if i not in idxs_test]
+    test_x = [X[i] for i in idxs_test]
+    test_y = [y[i] for i in idxs_test]
+
+    return train_x, test_x, train_y, test_y
+
+
+
 # compute kernel-target alignment
 def k_target_alignment(K, y):
     B = jnp.outer(y, y)
