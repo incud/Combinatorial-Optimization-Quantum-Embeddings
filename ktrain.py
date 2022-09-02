@@ -169,16 +169,16 @@ def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, 
             old_gen = int(pretrained.split('_')[1])
 
         valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
-        valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
+        valid_y = np.array(dataset['train_y'] + dataset['valid_y']).ravel()
         if metric == 'mse':
-            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']), d, layers, v_thr,
+            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']).ravel(), d, layers, v_thr,
                                   num_parents_mating=int(spp * npm),
                                   num_generations=gens - old_gen,
                                   solution_per_population=spp,
                                   initial_population=init_pop,
                                   fitness_mode='mse',
                                   validation_X=np.array(dataset['valid_x']),
-                                  validation_y=np.array(dataset['valid_y']),
+                                  validation_y=np.array(dataset['valid_y']).ravel(),
                                   threshold_mode=thr_mode,
                                   verbose='minimal')
         elif metric == 'kta':

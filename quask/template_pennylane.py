@@ -647,10 +647,11 @@ class GeneticEmbedding:
         def on_fitness(ga_instance, population_fitness):
 
             def update_threshold(variance_list):
-                mean = np.mean(variance_list)
-                std_dev = np.std(variance_list)
-                prob = 1 - self.num_parents_mating/self.solution_per_population
-                self.kernel_concentration_threshold = norm.ppf(prob, loc=mean, scale=std_dev)
+                if len(variance_list) > 0:
+                    mean = np.mean(variance_list)
+                    std_dev = np.std(variance_list)
+                    prob = 1 - self.num_parents_mating/self.solution_per_population
+                    self.kernel_concentration_threshold = norm.ppf(prob, loc=mean, scale=std_dev)
 
             prep_variance_computation()
             if self.threshold_mode == 'adaptive': update_threshold(self.all_variance_list)
@@ -729,6 +730,19 @@ class GeneticEmbedding:
             on_stop=on_stop
         )
 
+
+    # compute variance of pre-selected gram matrix entries
+    def compute_variance(self, feat_map, X_1, X_2, params=[1.0]):
+        var_list = []
+        X_1_proj = projected_xyz_embedding(feat_map, X_1)
+        X_2_proj = projected_xyz_embedding(feat_map, X_2)
+        gamma = params[0]
+        for i in range(X_1_proj.shape[0]):
+            value = np.exp(-gamma * ((X_1_proj[i] - X_2_proj[i]) ** 2).sum())
+            var_list.append(value)
+        return np.var(var_list)
+
+
     def create_operations(self, include_inverse=False, constant_ticks=4):
         operations = []
         # constants
@@ -765,22 +779,11 @@ class GeneticEmbedding:
             y_predict = svm.predict(gram_test)
             return -mean_squared_error(y_test, y_predict)
 
-        # compute variance of pre-selected gram matrix entries
-        def compute_variance(feat_map, X_1, X_2, params=[1.0]):
-            var_list = []
-            X_1_proj = projected_xyz_embedding(feat_map, X_1)
-            X_2_proj = projected_xyz_embedding(feat_map, X_2)
-            gamma = params[0]
-            for i in range(X_1_proj.shape[0]):
-                value = np.exp(-gamma * ((X_1_proj[i] - X_2_proj[i]) ** 2).sum())
-                var_list.append(value)
-            return np.var(var_list)
-
         feature_map = lambda x, wires: self.transform_solution_to_embedding(x, solution)
         X_batch = self.X
         y_batch = self.y
 
-        variance = compute_variance(feature_map, X_batch[self.variance_idxs[0]], X_batch[self.variance_idxs[1]])
+        variance = self.compute_variance(feature_map, X_batch[self.variance_idxs[0]], X_batch[self.variance_idxs[1]])
         self.all_variance_list.append(variance)
         if self.verbose == True : print(variance)
         if variance < self.kernel_concentration_threshold:
