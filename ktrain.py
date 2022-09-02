@@ -102,8 +102,8 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
         opt_state = adam_optimizer.init(params)
         valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
         train_x = np.array(dataset['train_x'])
-        valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
-        train_y = np.array(dataset['train_y'])
+        valid_y = np.array(dataset['train_y'] + dataset['valid_y']).ravel()
+        train_y = np.array(dataset['train_y']).ravel()
         start = time.process_time()
 
         sys.stdout.write('\033[K' + 'Training started. --- Estimated time left: H:mm:ss.dddddd' + '\r')

@@ -7,7 +7,7 @@
         "samples": 75,
         "features": 4,
         "seed": 12347,
-        "testset": 0.666,
+        "testset": 0.334,
         "validationset": 0.5
       },
       "training": [
