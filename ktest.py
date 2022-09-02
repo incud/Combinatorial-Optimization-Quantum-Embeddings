@@ -46,6 +46,8 @@ def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
                 res[k] = res[k] + np.linalg.eigvals(res_dict[k]['kernels'][i]['K']).tolist()
             else:
                 res[k] = np.linalg.eigvals(res_dict[k]['kernels'][i]['K']).tolist()
+        res[k] = np.array(res[k]).astype(complex)
+        res[k] = res[k].real
         count +=1
 
 
@@ -87,12 +89,12 @@ def plot_scatter_accuracy_variance(kernels, dataset, y_train, y_test, type = 'ms
         if type == 'mse':
             acc_name = 'Negative Mean Squared Error'
             for kernel in res_dict[k]['kernels']:
-                res_dict[k]['accuracy'].append(accuracy_svr(kernel['K'], kernel['K_test'], y_train, y_test))
+                res_dict[k]['accuracy'].append(accuracy_svr(kernel['K'], kernel['K_test'], np.ravel(y_train), np.ravel(y_test)))
         elif type == 'kta':
             pass
             acc_name = 'Kernel-Target Alignment (Training)'
             for kernel in res_dict[k]['kernels']:
-                res_dict[k]['accuracy'].append(k_target_alignment(kernel['K'], np.array(y_train)))
+                res_dict[k]['accuracy'].append(k_target_alignment(kernel['K'], np.array(y_train).ravel()))
 
     keys = list(res_dict.keys())
     keys.sort()
