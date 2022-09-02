@@ -165,45 +165,42 @@ def compute_key(name, differentiate, type_obj):
 # # ====================================================================
 
 def load_dataset(file, type):
-    if type == 'synt':
-        return load_synthetic(file)
-    elif type == 'mnist':
-        return load_mnist(file)
-
-
-
-# load synthetic dataset
-def load_synthetic(file):
     dataset = {}
     filedata = np.load(file, allow_pickle=True)
-    dataset['X'] = filedata.item().get('X')
-    dataset['weights_shape'] = filedata.item().get('weights_shape')
-    dataset['weights'] = filedata.item().get('weights')
-    dataset['Y'] = filedata.item().get('Y')
     dataset['train_x'] = filedata.item().get('train_x')
     dataset['train_y'] = filedata.item().get('train_y')
     dataset['test_x'] = filedata.item().get('test_x')
     dataset['test_y'] = filedata.item().get('test_y')
     dataset['valid_x'] = filedata.item().get('valid_x')
     dataset['valid_y'] = filedata.item().get('valid_y')
+
+    if type == 'synt':
+        return load_synthetic(filedata, dataset)
+    elif type == 'mnist':
+        return load_mnist(file)
+    else:
+        dataset['X'] = filedata.item().get('X')
+        dataset['Y'] = filedata.item().get('Y')
+        return dataset
+
+
+
+# load synthetic dataset
+def load_synthetic(filedata, dataset):
+    dataset['X'] = filedata.item().get('X')
+    dataset['weights_shape'] = filedata.item().get('weights_shape')
+    dataset['weights'] = filedata.item().get('weights')
+    dataset['Y'] = filedata.item().get('Y')
     return dataset
 
 
 
 # load mnist dataset
-def load_mnist(file):
-    dataset = {}
-    filedata = np.load(file, allow_pickle=True)
+def load_mnist(filedata, dataset):
     dataset['XC1'] = filedata.item().get('XC1')
     dataset['XC2'] = filedata.item().get('XC2')
     dataset['YC1'] = filedata.item().get('YC1')
     dataset['YC2'] = filedata.item().get('YC2')
-    dataset['train_x'] = filedata.item().get('train_x')
-    dataset['train_y'] = filedata.item().get('train_y')
-    dataset['test_x'] = filedata.item().get('test_x')
-    dataset['test_y'] = filedata.item().get('test_y')
-    dataset['valid_x'] = filedata.item().get('valid_x')
-    dataset['valid_y'] = filedata.item().get('valid_y')
     return dataset
 
 

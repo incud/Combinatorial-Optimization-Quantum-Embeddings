@@ -191,10 +191,10 @@ def generate_cancer_data(res_dir, name, d, n, seed, test, valid):
     y_all = y_all - np.mean(y_all)
 
     idxs = np.random.choice(len(X_all), n, replace=False)
-    X = [X_all[i] for i in range(len(X_all)) if i in idxs]
-    y = [y_all[i] for i in range(len(y_all)) if i in idxs]
+    dataset['X'] = [X_all[i] for i in range(len(X_all)) if i in idxs]
+    dataset['Y'] = [y_all[i] for i in range(len(y_all)) if i in idxs]
 
-    X_train, dataset['test_x'], y_train, dataset['test_y'] = list_train_test_split(X, y, n_test=int(n*test), seed=seed)
+    X_train, dataset['test_x'], y_train, dataset['test_y'] = list_train_test_split(dataset['X'], dataset['Y'], n_test=int(n*test), seed=seed)
     dataset['train_x'], dataset['valid_x'], dataset['train_y'], dataset['valid_y'] = list_train_test_split(X_train, y_train, n_test=int(n*valid), seed=seed)
 
     np.save(file, dataset)
