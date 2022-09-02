@@ -102,6 +102,8 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
         opt_state = adam_optimizer.init(params)
         valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
         train_x = np.array(dataset['train_x'])
+        valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
+        train_y = np.array(dataset['train_y'])
         start = time.process_time()
 
         sys.stdout.write('\033[K' + 'Training started. --- Estimated time left: H:mm:ss.dddddd' + '\r')
@@ -114,13 +116,13 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
                 K_v = pennylane_projected_quantum_kernel(
                     lambda x, wires: trainable_embedding(x, params, layers, wires=wires),
                     valid_x, train_x)
-                cost, grad_circuit = jax.value_and_grad(lambda theta: accuracy_svr(K, K_v, dataset['train_y'],  dataset['train_y']+dataset['valid_y']))(params)
+                cost, grad_circuit = jax.value_and_grad(lambda theta: accuracy_svr(K, K_v, train_y, valid_y))(params)
 
             else:
                 # train on full training set without validation
                 K = pennylane_projected_quantum_kernel(
                     lambda x, wires: trainable_embedding(x, params, layers, wires=wires), valid_x)
-                cost, grad_circuit = jax.value_and_grad(lambda theta: k_target_alignment(K, np.array(dataset['train_y']+dataset['valid_y'])))(params)
+                cost, grad_circuit = jax.value_and_grad(lambda theta: k_target_alignment(K, valid_y))(params)
 
             updates, opt_state = adam_optimizer.update(grad_circuit, opt_state)
             params = optax.apply_updates(params, updates)
