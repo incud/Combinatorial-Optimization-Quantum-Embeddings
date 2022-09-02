@@ -1,21 +1,12 @@
+import datetime
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 from quask.combinatorial_kernel_optimization_simanneal import *
+from quask.combinatorial_kernel_mcts import *
 from quask.random_kernel import *
 from quask.trainable_kernel import *
 from quask.datasets import *
-
-
-def load_losses(dataset_directory, repetitions):
-    labels = ["Linear SVM", "Gaussian SVM", "Neural Network", "NTK (init) + SVM", "NTK (end) + SVM", "PK + SVM", "Decorrelated PK + SVM"]
-    loss_files = ["linear_loss.npy", "gaussian_loss.npy", "predictor_loss.npy", "tang_init_loss.npy", "tang_end_loss.npy", "path_loss.npy", "dec_path_loss.npy"]
-    loss_data = [
-        [np.load(f"{dataset_directory}_{i}/{file}") for i in range(1, repetitions+1)]
-        for file in loss_files
-    ]
-    return np.array(loss_data).astype(float), labels
-
 
 def run_experiment(X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, repetitions, save_path):
 
@@ -60,64 +51,27 @@ def run_experiment(X_train, X_validation, X_test, y_train, y_validation, y_test,
             np.save(f"{save_path}/ck_solution_{i}.npy", best_solution)
 
 
-def plot_experiments(X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, repetitions, load_path):
-    rk_weights = [np.load(f"{load_path}/rk_weights_{i}.npy") for i in range(repetitions)]
-    init_solutions = [np.load(f"{load_path}/initial_solution_{i}.npy") for i in range(repetitions)]
-    tk_weights = [np.load(f"{load_path}/tk_weights_{i}.npy") for i in range(repetitions)]
-    ck_solutions = [np.load(f"{load_path}/ck_solution_{i}.npy") for i in range(repetitions)]
-
-    rk_mse = []
-    for i, rk_weight in enumerate(rk_weights):
-        rk = RandomKernel(X_train, y_train, X_validation, y_validation, n_layers=n_layers, seed=344143+1)
-        this_mse = rk.estimate_mse(weights=rk_weight, X_test=X_test, y_test=y_test)
-        rk_mse.append(this_mse)
-        print(f"RK MSE {i} = {this_mse:0.3f}")
-
-    tk_mse = []
-    for i, (initial_solution, tk_weight) in enumerate(zip(init_solutions, tk_weights)):
-        tk = TrainableKernel(X_train, y_train, X_validation, y_validation, n_layers, initial_solution)
-        this_mse = tk.estimate_mse(weights=tk_weight, X_test=X_test, y_test=y_test)
-        tk_mse.append(this_mse)
-        print(f"TK MSE {i} = {this_mse:0.3f}")
-
-    ck_mse = []
-    for i, ck_solution in enumerate(ck_solutions):
-        ck = CombinatorialKernelSimulatedAnnealingTraining(
-            n_components, n_layers, initial_solution, n_components,
-            X_train, y_train, X_validation, y_validation)
-        this_mse = ck.estimate_mse(solution=ck_solution, X_test=X_test, y_test=y_test)
-        ck_mse.append(this_mse)
-        print(f"CK MSE {i} = {this_mse:0.3f}")
-
-    plt.figure()
-    plt.violinplot(
-        [rk_mse, tk_mse, ck_mse],
-        range(3),
-        widths=0.3,
-        showmeans=True,
-        showextrema=True,
-        showmedians=True
-    )
-    plt.ylabel("MSE (lower = better)")
-    plt.xticks(range(3), ['RK', 'TK', 'CK'], rotation=45)
-    plt.subplots_adjust(bottom=0.25)
-    plt.savefig(f"{load_path}/violin.png")
-    plt.close()
-
-
 random.seed(12345)
 np.random.seed(12345)
 
 dataset = load_who_life_expectancy_dataset()
 dataset['X'] = dataset['X']
 dataset['y'] = dataset['y']
-n_components = min(dataset['X'].shape[0], 5)
-n_elements = 100
+n_components = min(dataset['X'].shape[0], 3)
+n_elements = 10
 X_train, X_other, y_train, y_other = process_regression_dataset(dataset, n_components, n_elements)
 X_validation, X_test, y_validation, y_test = process_regression_dataset({'X': X_other, 'y': y_other}, n_components)
 
-n_layers = 3
+n_layers = 2
 repetitions = 10
 save_path = "new results 2"
-# run_experiment(X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, repetitions, save_path)
-plot_experiments(X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, repetitions, save_path)
+
+initial_solution = create_random_combinatorial_kernel(
+                n_qubits=n_components,
+                n_layers=n_layers,
+                n_operations=n_components).astype(int)
+
+ck = CombinatorialKernelMtcs(initial_solution, n_components, n_layers, n_components, X_train, y_train, X_validation, y_validation)
+print(datetime.datetime.now().strftime("%H:%M:%S"))
+res = ck.search()
+print(datetime.datetime.now().strftime("%H:%M:%S"))
