@@ -9,6 +9,44 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from utils import *
 
+
+# prepare quantum feature map
+def plot_quantum_feature_map(res_dir, dataset, kernelname, x, params):
+    n = len(x)
+    if dataset.split('_')[0] == 'random':
+        embedding = lambda x, wires: random_quantum_embedding(x, wires, params['seed'])
+    elif dataset.split('_')[0] == 'trainable':
+        embedding = lambda x, wires: trainable_embedding(x, params['params'], n, wires=wires)
+    elif dataset.split('_')[0] == 'genetic':
+        ge = GeneticEmbedding(valid_x, valid_y, d, layers, v_thr,
+                              num_parents_mating=int(spp * npm),
+                              num_generations=gens - old_gen,
+                              solution_per_population=spp,
+                              initial_population=init_pop,
+                              fitness_mode='kta',
+                              threshold_mode=thr_mode,
+                              verbose='minimal')
+        embedding =
+
+    device = qml.device("default.qubit.jax", wires=n)
+
+    # define the circuit for the quantum kernel ("overlap test" circuit)
+    @qml.qnode(device, interface='jax')
+    def proj_feature_map(x):
+        embedding(x, wires=range(n))
+        return (
+            [qml.expval(qml.PauliX(i)) for i in range(n)]
+            + [qml.expval(qml.PauliY(i)) for i in range(n)]
+            + [qml.expval(qml.PauliZ(i)) for i in range(n)]
+        )
+
+    path = res_dir + '/' + dataset + '/plots'
+    if not os.path.isdir(path): os.mkdir(path)
+    plt.savefig(path + '/circuit_' + dataset + '_' + kernelname + '.png')
+    plt.clf()
+
+
+
 # scatter plot of accuracy and variance
 def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
     res_dict = {}
