@@ -66,7 +66,7 @@ def trainable_embedding(x, theta, layers, wires):
 
 # create quantum system that generates the labels
 @jax.jit
-def generate_label(x, weights):
+def generate_label(x, weights, verbose=False):
 
     N = len(x)
     device = qml.device("default.qubit.jax", wires=N)
@@ -78,7 +78,7 @@ def generate_label(x, weights):
         return qml.expval(qml.PauliZ(1))
 
     drawer = qml.draw(quantum_system)
-    print(drawer())
+    if verbose: print(drawer())
     return quantum_system()
 
 

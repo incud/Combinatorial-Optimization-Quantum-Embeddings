@@ -11,22 +11,15 @@ from utils import *
 
 
 # prepare quantum feature map
-def plot_quantum_feature_map(res_dir, dataset, kernelname, x, params):
-    n = len(x)
-    if dataset.split('_')[0] == 'random':
-        embedding = lambda x, wires: random_quantum_embedding(x, wires, params['seed'])
-    elif dataset.split('_')[0] == 'trainable':
-        embedding = lambda x, wires: trainable_embedding(x, params['params'], n, wires=wires)
-    elif dataset.split('_')[0] == 'genetic':
-        ge = GeneticEmbedding(valid_x, valid_y, d, layers, v_thr,
-                              num_parents_mating=int(spp * npm),
-                              num_generations=gens - old_gen,
-                              solution_per_population=spp,
-                              initial_population=init_pop,
-                              fitness_mode='kta',
-                              threshold_mode=thr_mode,
-                              verbose='minimal')
-        embedding =
+def plot_quantum_feature_map(res_dir, dataset, kernelname, val, params, ge):
+
+    n = len(val)
+    if kernelname.split('_')[0] == 'random':
+        embedding = lambda x, wires: (random_quantum_embedding(x, wires, params['seed']))
+    elif kernelname.split('_')[0] == 'trainable':
+        embedding = lambda x, wires: (trainable_embedding(x, params['params'], n, wires=wires))
+    elif kernelname.split('_')[0] == 'genetic':
+        embedding = lambda x, wires: (ge.transform_solution_to_embedding(x, params['best_solution']))
 
     device = qml.device("default.qubit.jax", wires=n)
 
@@ -36,13 +29,14 @@ def plot_quantum_feature_map(res_dir, dataset, kernelname, x, params):
         embedding(x, wires=range(n))
         return (
             [qml.expval(qml.PauliX(i)) for i in range(n)]
-            + [qml.expval(qml.PauliY(i)) for i in range(n)]
-            + [qml.expval(qml.PauliZ(i)) for i in range(n)]
         )
+
+    qml.drawer.use_style('black_white')
+    fig, ax = qml.draw_mpl(proj_feature_map, decimals=3,expansion_strategy="device")(val)
 
     path = res_dir + '/' + dataset + '/plots'
     if not os.path.isdir(path): os.mkdir(path)
-    plt.savefig(path + '/circuit_' + dataset + '_' + kernelname + '.png')
+    plt.savefig(path + '/circuit_' + kernelname + '.png')
     plt.clf()
 
 
@@ -189,15 +183,12 @@ def conf_process(file):
     for name in datanames:
         datasets[name] = load_dataset(res_dir + '/' + name + '/' + name + '.npy', name.split('_')[0])
 
-    print('\n##### DATASETS AND KERNELS LOADED #####')
-
+    print('\n##### DATASETS AND KERNELS LOADED #####\n')
 
 
 
     print('\n##### GA-HYPERPARAMETER ANALYSIS COMPLETED #####\n')
 
-
-    print('\n##### GA-HYPERPARAMETER ANALYSIS COMPLETED #####\n')
 
     for data in kernels.keys():
         plot_kernels_eigenvalues(kernels[data], data)
@@ -211,7 +202,6 @@ def conf_process(file):
     print('\n##### GRAM MATRICES ANALYSIS COMPLETED #####\n')
 
 
-
     for data in kernels.keys():
         plot_scatter_accuracy_variance(kernels[data], data, datasets[data]['train_y'] + datasets[data]['valid_y'], datasets[data]['test_y'])
         plot_scatter_accuracy_variance(kernels[data], data, datasets[data]['train_y'] + datasets[data]['valid_y'], datasets[data]['test_y'], differentiate = 'all')
@@ -223,8 +213,24 @@ def conf_process(file):
     print('\n##### PERFORMANCE ANALYSIS COMPLETED #####\n')
 
 
+    for data in kernels.keys():
+        for kernel in kernels[data].keys():
+            ge = None
+            params = {}
+            val = datasets[data]['test_x'][0]
+
+            if kernel.split('_')[0] == 'random':
+                params['seed'] = int(kernel.split('_')[1])
+                val = kernels[data][kernel]['weights'][0]
+            elif kernel.split('_')[0] == 'trainable':
+                params['params'] = kernels[data][kernel]['trained_params']
+            elif kernel.split('_')[0] == 'genetic':
+                params['best_solution'] = kernels[data][kernel]['best_solution']
+                ge = GeneticEmbedding(datasets[data]['test_x'], datasets[data]['test_y'], len(val), len(val), 0.01, num_parents_mating=1)
+            plot_quantum_feature_map(res_dir, data, kernel, val, params, ge)
 
     print('\n##### CIRCUITS REPRESENTATION GENERATED #####\n')
+
 
 
 def main(conf=False, file=None):
