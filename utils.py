@@ -145,6 +145,8 @@ def compute_key(name, differentiate, type_obj):
         elif differentiate == 'all':
             if name.split('_')[0] == 'synt':
                 key = name.split('_')[0] + ' d=' + name.split('_')[2] + ' N=' + name.split('_')[1]
+            elif name.split('_')[0] == 'cancer':
+                key = name.split('_')[0] + ' d=' + name.split('_')[2] + ' N=' + name.split('_')[1]
 
     elif type_obj == 'kernel':
         if differentiate == 'kernel':
