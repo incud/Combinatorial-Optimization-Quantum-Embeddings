@@ -11,7 +11,7 @@ from utils import *
 
 
 # prepare quantum feature map
-def plot_quantum_feature_map(res_dir, dataset, kernelname, val, params, ge):
+def plot_quantum_feature_map(dataset, kernelname, val, params, ge):
 
     n = len(val)
     if kernelname.split('_')[0] == 'random':
@@ -37,19 +37,15 @@ def plot_quantum_feature_map(res_dir, dataset, kernelname, val, params, ge):
     path = res_dir + '/' + dataset + '/plots'
     if not os.path.isdir(path): os.mkdir(path)
     plt.savefig(path + '/circuit_' + kernelname + '.png')
-    plt.clf()
+    plt.close()
 
 
 
 # scatter plot of accuracy and variance
 def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
     res_dict = {}
-    acc_name = ''
-
 
     f = plt.figure()
-    f.set_figwidth(15)
-    f.set_figheight(15)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
 
     for k in kernels.keys():
@@ -167,6 +163,50 @@ def plot_scatter_accuracy_variance(kernels, dataset, y_train, y_test, type = 'ms
 
 
 # main function
+def plot_hyperparams_analysis(kernels, data):
+
+    max_v = {}
+    length = {}
+
+    gens_max = max([int(i.split('_')[1]) for i in kernels.keys() if i.split('_')[0] == 'genetic'])
+
+    for kernel in kernels.keys():
+        if kernel.split('_')[0] == 'genetic' and int(kernel.split('_')[1]) == gens_max:
+            key = compute_key(kernel, 'all', 'kernel')
+            if key not in max_v.keys():
+                max_v[key] = []
+                length[key] = []
+            max_v[key].append([max(i) if len(i)!=0 else 0 for i in kernels[kernel]['low_variance_list']])
+            length[key].append([len(i) for i in kernels[kernel]['low_variance_list']])
+
+    fig, ax = plt.subplots()
+    for i in length.keys():
+        ax.plot(range(gens_max + 1),
+            np.mean(length[i], axis=0), label=i)
+    ax.set_xlabel("Generations")
+    ax.set_ylabel("Excluded Kernels Count")
+    plt.legend()
+
+    path = res_dir + '/' + data + '/plots'
+    if not os.path.isdir(path): os.mkdir(path)
+    plt.savefig(path + '/hyper_analysis_count_' + str(gens_max) + '.png')
+    plt.clf()
+
+
+    fig, ax = plt.subplots()
+    for i in max_v.keys():
+        ax.plot(range(gens_max + 1),
+            np.mean(max_v[i], axis=0),label=i)
+    ax.set_xlabel("Generations")
+    ax.set_ylabel("Max Excluded Variance")
+    plt.legend()
+
+    path = res_dir + '/' + data + '/plots'
+    if not os.path.isdir(path): os.mkdir(path)
+    plt.savefig(path + '/hyper_analysis_max_' + str(gens_max) + '.png')
+    plt.clf()
+
+
 def conf_process(file):
     global res_dir
     with open(file) as config_file:
@@ -206,7 +246,8 @@ def conf_process(file):
 
     print('\n##### DATASETS AND KERNELS LOADED #####\n')
 
-
+    for data in kernels.keys():
+        plot_hyperparams_analysis(kernels[data], data)
 
     print('\n##### GA-HYPERPARAMETER ANALYSIS COMPLETED #####\n')
 
@@ -248,7 +289,7 @@ def conf_process(file):
             elif kernel.split('_')[0] == 'genetic':
                 params['best_solution'] = kernels[data][kernel]['best_solution']
                 ge = GeneticEmbedding(datasets[data]['test_x'], datasets[data]['test_y'], len(val), len(val), 0.01, num_parents_mating=1)
-            plot_quantum_feature_map(res_dir, data, kernel, val, params, ge)
+            plot_quantum_feature_map(data, kernel, val, params, ge)
 
     print('\n##### CIRCUITS REPRESENTATION GENERATED #####\n')
 
