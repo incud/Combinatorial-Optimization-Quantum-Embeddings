@@ -165,8 +165,10 @@ def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, 
             old_kerneldata = load_kernel(path + pretrained, 'genetic')
             init_pop = old_kerneldata['population']
             kerneldata['low_variance_list'] = old_kerneldata['low_variance_list']
+            kerneldata['low_variance_list'].pop()
             assert init_pop is not None
             old_gen = int(pretrained.split('_')[1])
+            v_thr = old_kerneldata['v_thr']
 
         valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
         valid_y = np.array(dataset['train_y'] + dataset['valid_y']).ravel()
@@ -194,6 +196,7 @@ def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, 
         kerneldata['best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
         kerneldata['population'] = ge.ga.population
         kerneldata['low_variance_list'] = kerneldata['low_variance_list'] + ge.low_variance_list
+        kerneldata['v_thr'] = ge.kernel_concentration_threshold
         feature_map = lambda x, wires: ge.transform_solution_to_embedding(x, kerneldata['best_solution'])
         kerneldata['K'] = pennylane_projected_quantum_kernel(feature_map, valid_x)
         kerneldata['K_test'] = pennylane_projected_quantum_kernel(feature_map, np.array(dataset['test_x']), valid_x)
