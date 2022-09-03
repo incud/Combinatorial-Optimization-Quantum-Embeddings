@@ -95,6 +95,27 @@ def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
     plt.savefig(path + '/eigenvalues_density_' + differentiate + '.png')
     plt.clf()
 
+    if differentiate == 'all':
+        l = [i for i in range(0,len(res.keys())*3,3)]
+        rot= 45
+    else:
+        l = [i for i in range(0,len(res.keys()))]
+        rot=0
+    v = [res[k].tolist() for k in res.keys()]
+    plt.violinplot(
+        v,
+        l,
+        showmeans=True,
+        showextrema=True,
+        showmedians=True
+    )
+    plt.ylabel("Eigenvalues Distribution")
+    plt.xticks(l, res.keys(), rotation=rot, fontsize=6)
+    plt.subplots_adjust(bottom=0.25)
+    plt.savefig(path + '/eigenvalues_violin_' + differentiate + '.png')
+    plt.clf()
+
+
 
 
 # scatter plot of accuracy and variance
