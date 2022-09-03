@@ -89,7 +89,7 @@ def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
     path = res_dir + '/' + dataset + '/plots'
     if not os.path.isdir(path): os.mkdir(path)
     plt.savefig(path + '/eigenvalues_density_' + differentiate + '.png')
-    plt.clf()
+    plt.close()
 
     if differentiate == 'all':
         l = [i for i in range(0,len(res.keys())*3,3)]
@@ -103,13 +103,13 @@ def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
         l,
         showmeans=True,
         showextrema=True,
-        showmedians=True
     )
+    plt.title('Dataset: ' + compute_key(dataset, 'all', 'dataset'), fontsize=15)
     plt.ylabel("Eigenvalues Distribution")
     plt.xticks(l, res.keys(), rotation=rot, fontsize=6)
     plt.subplots_adjust(bottom=0.25)
     plt.savefig(path + '/eigenvalues_violin_' + differentiate + '.png')
-    plt.clf()
+    plt.close()
 
 
 
@@ -150,7 +150,7 @@ def plot_scatter_accuracy_variance(kernels, dataset, y_train, y_test, type = 'ms
     for k in keys:
         plt.scatter(res_dict[k]['accuracy'], res_dict[k]['variance'], label = k)
 
-    plt.title('Dataset: ' + compute_key(dataset, 'all', 'dataset'), fontsize=20)
+    plt.title('Dataset: ' + compute_key(dataset, 'all', 'dataset'), fontsize=15)
     plt.xlabel(acc_name, fontsize=15)
     plt.ylabel('Variance', fontsize=15)
     plt.legend(prop={'size': 6})
@@ -158,13 +158,12 @@ def plot_scatter_accuracy_variance(kernels, dataset, y_train, y_test, type = 'ms
     path = res_dir + '/' + dataset + '/plots'
     if not os.path.isdir(path): os.mkdir(path)
     plt.savefig(path + '/variance_' + type + '_' + differentiate + '.png')
-    plt.clf()
+    plt.close()
 
 
 
 # main function
 def plot_hyperparams_analysis(kernels, data):
-
     max_v = {}
     length = {}
 
@@ -183,6 +182,7 @@ def plot_hyperparams_analysis(kernels, data):
     for i in length.keys():
         ax.plot(range(gens_max + 1),
             np.mean(length[i], axis=0), label=i)
+    plt.title('Dataset: ' + compute_key(data, 'all', 'dataset'), fontsize=15)
     ax.set_xlabel("Generations")
     ax.set_ylabel("Excluded Kernels Count")
     plt.legend()
@@ -190,7 +190,7 @@ def plot_hyperparams_analysis(kernels, data):
     path = res_dir + '/' + data + '/plots'
     if not os.path.isdir(path): os.mkdir(path)
     plt.savefig(path + '/hyper_analysis_count_' + str(gens_max) + '.png')
-    plt.clf()
+    plt.close()
 
 
     fig, ax = plt.subplots()
@@ -199,12 +199,51 @@ def plot_hyperparams_analysis(kernels, data):
             np.mean(max_v[i], axis=0),label=i)
     ax.set_xlabel("Generations")
     ax.set_ylabel("Max Excluded Variance")
+    plt.title('Dataset: ' + compute_key(data, 'all', 'dataset'), fontsize=15)
     plt.legend()
 
     path = res_dir + '/' + data + '/plots'
     if not os.path.isdir(path): os.mkdir(path)
     plt.savefig(path + '/hyper_analysis_max_' + str(gens_max) + '.png')
-    plt.clf()
+    plt.close()
+
+
+def plot_variance_analysis(kernels, data):
+    values = {}
+
+    for kernel in kernels.keys():
+        key = compute_key(kernel, 'all', 'kernel')
+        if key not in values.keys():
+            values[key] = []
+        values[key] = np.concatenate([values[key], upper_tri_indexing(kernels[kernel]['K'])])
+
+
+    l = [i for i in range(0, len(values.keys()) * 3, 3)]
+    rot = 45
+    v = [values[k].tolist() for k in values.keys()]
+    plt.violinplot(
+        v,
+        l,
+        showmeans=True,
+        showextrema=True,
+    )
+    plt.title('Dataset: ' + compute_key(data, 'all', 'dataset'), fontsize=15)
+    plt.ylabel("Gram Matrix Entries Distribution")
+    plt.xticks(l, values.keys(), rotation=rot, fontsize=6)
+    plt.subplots_adjust(bottom=0.25)
+    path = res_dir + '/' + data + '/plots'
+    if not os.path.isdir(path): os.mkdir(path)
+    plt.savefig(path + '/gram_matrix_violin_' + data + '.png')
+    plt.close()
+
+
+def plot_gram_matrix(k, data, kernel):
+    plt.title('Kernel: ' + kernel, fontsize=10)
+    ax = sns.heatmap(k)
+    path = res_dir + '/' + data + '/plots'
+    if not os.path.isdir(path): os.mkdir(path)
+    plt.savefig(path + '/gram_matrix_' + kernel + '.png')
+    plt.close()
 
 
 def conf_process(file):
@@ -259,7 +298,10 @@ def conf_process(file):
     print('\n##### SPECTRAL ANALYSIS COMPLETED #####\n')
 
 
-
+    for data in kernels.keys():
+        plot_variance_analysis(kernels[data], data)
+        for kernel in kernels[data].keys():
+            plot_gram_matrix(kernels[data][kernel]['K'], data, kernel)
 
     print('\n##### GRAM MATRICES ANALYSIS COMPLETED #####\n')
 
