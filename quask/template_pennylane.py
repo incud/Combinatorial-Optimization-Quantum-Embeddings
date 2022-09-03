@@ -662,7 +662,7 @@ class GeneticEmbedding:
                 print(self.low_variance_list[len(self.low_variance_list) - 2])
                 print(f'F:{np.min(population_fitness)}-{np.max(population_fitness)} ', end='', flush=True)
             elif self.verbose == 'minimal':
-                max_var = '*'
+                max_var = 'NONE'
                 if self.low_variance_list[len(self.low_variance_list) - 2]: max_var = str(max(self.low_variance_list[len(self.low_variance_list) - 2]))
                 sys.stdout.write('\033[K' + 'Remaining generation: ' + str(self.num_generations - self.count) +
                                  ' --- Max fitness: ' + str(np.max(population_fitness)) +
