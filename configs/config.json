@@ -4,11 +4,11 @@
     {
       "dataset": {
         "type": "cancer",
-        "samples": 75,
-        "features": 4,
+        "samples": 150,
+        "features": 5,
         "seed": 12347,
         "testset": 0.334,
-        "validationset": 0.5
+        "validationset": 0.2
       },
       "training": [
         {
@@ -25,45 +25,45 @@
         },
         {
           "type": "trainable",
-          "epochs": 100,
+          "epochs": 20,
           "metric": "mse",
           "seed": 126
         },
         {
           "type": "trainable",
-          "epochs": 100,
+          "epochs": 20,
           "metric": "mse",
           "seed": 1526
         },
         {
           "type": "trainable",
-          "epochs": 100,
+          "epochs": 20,
           "metric": "mse",
           "seed": 12960
         },
         {
           "type": "trainable",
-          "epochs": 100,
+          "epochs": 20,
           "metric": "kta",
           "seed": 12446
         },
         {
           "type": "trainable",
-          "epochs": 100,
+          "epochs": 20,
           "metric": "kta",
           "seed": 152644
         },
         {
           "type": "trainable",
-          "epochs": 100,
+          "epochs": 20,
           "metric": "kta",
           "seed": 124604
         },
         {
           "type": "genetic",
-          "generations": 20,
-          "spp": 50,
-          "npm": 0.2,
+          "generations": 4,
+          "spp": 100,
+          "npm": 0.1,
           "variance_threshold": 0.1,
           "threshold_mode": "adaptive",
           "metric": "kta",
@@ -71,9 +71,9 @@
         },
         {
           "type": "genetic",
-          "generations": 20,
-          "spp": 50,
-          "npm": 0.2,
+          "generations": 4,
+          "spp": 100,
+          "npm": 0.1,
           "variance_threshold": 0.1,
           "threshold_mode": "adaptive",
           "metric": "kta",
@@ -81,9 +81,9 @@
         },
         {
           "type": "genetic",
-          "generations": 20,
-          "spp": 50,
-          "npm": 0.2,
+          "generations": 4,
+          "spp": 100,
+          "npm": 0.1,
           "variance_threshold": 0.1,
           "threshold_mode": "adaptive",
           "metric": "kta",
@@ -91,9 +91,9 @@
         },
         {
           "type": "genetic",
-          "generations": 20,
-          "spp": 50,
-          "npm": 0.2,
+          "generations": 4,
+          "spp": 100,
+          "npm": 0.1,
           "variance_threshold": 0.1,
           "threshold_mode": "adaptive",
           "metric": "mse",
@@ -101,9 +101,9 @@
         },
         {
           "type": "genetic",
-          "generations": 20,
-          "spp": 50,
-          "npm": 0.2,
+          "generations": 4,
+          "spp": 100,
+          "npm": 0.1,
           "variance_threshold": 0.1,
           "threshold_mode": "adaptive",
           "metric": "mse",
@@ -111,9 +111,9 @@
         },
         {
           "type": "genetic",
-          "generations": 20,
-          "spp": 50,
-          "npm": 0.2,
+          "generations": 4,
+          "spp": 100,
+          "npm": 0.1,
           "variance_threshold": 0.1,
           "threshold_mode": "adaptive",
           "metric": "mse",
