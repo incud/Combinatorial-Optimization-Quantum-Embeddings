@@ -1,12 +1,16 @@
 import os
 from jax.config import config
+from sklearn.model_selection import train_test_split
+
 from quask.datasets import download_dataset_openml
 config.update("jax_enable_x64", True)
 import numpy as np
 from pathlib import Path
 from utils import *
 from sklearn import decomposition
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import Normalizer
+import pandas as pd
 
 
 
@@ -22,6 +26,8 @@ def generate_data(dts, res_dir):
         generate_synthetic_data(res_dir, name, dts['features'], dts['samples'], dts['seed'], dts['testset'], dts['validationset'])
     elif dts['type'] == 'mnist':
         generate_mnist_data(res_dir, name, dts['features'], dts['samples'], dts['seed'], dts['testset'], dts['validationset'])
+    elif dts['type'] == 'cancer':
+        generate_cancer_data(res_dir, name, dts['features'], dts['samples'], dts['seed'], dts['testset'], dts['validationset'])
     else:
         print('Invalid dataset type: no data will be generated for this configuration.')
         return False, ''
@@ -39,11 +45,11 @@ def generate_mnist_data(res_dir, name, d, n, seed, test, valid):
     jax.random.PRNGKey(seed)
     dataset = {}
 
-    if not os.path.isdir('mnist_2C'): os.mkdir('mnist_2C')
+    if not os.path.isdir('raw_data/mnist_2C'): os.mkdir('raw_data/mnist_2C')
 
-    if Path('mnist_2C/mnist_2C_X_' + str(d) + '.npy').exists() and Path('mnist_2C/mnist_2C_Y.npy').exists():
+    if Path('mnist_2C/mnist_2C_X_' + str(d) + '.npy').exists() and Path('raw_data/mnist_2C/mnist_2C_Y.npy').exists():
         x = np.load('mnist_2C/mnist_2C_X_' + str(d) + '.npy')
-        valid_y = np.load('mnist_2C/mnist_2C_Y.npy')
+        valid_y = np.load('raw_data/mnist_2C/mnist_2C_Y.npy')
     else:
         tmp_x, tmp_y = download_dataset_openml(40996)
         idxs = [i for i, elem in enumerate(tmp_y) if elem == 0 or elem == 1 ]
@@ -56,7 +62,7 @@ def generate_mnist_data(res_dir, name, d, n, seed, test, valid):
         tmp_x = pca.fit_transform(valid_x)
         x = Normalizer().fit_transform(tmp_x)
         np.save('mnist_2C/mnist_2C_X_' + str(d) + '.npy', x)
-        np.save('mnist_2C/mnist_2C_Y.npy', valid_y)
+        np.save('raw_data/mnist_2C/mnist_2C_Y.npy', valid_y)
 
     if not os.path.isdir(res_dir + '/' + name): os.mkdir(res_dir + '/' + name)
     file = res_dir + '/' + name + '/' + name +'.npy'
@@ -156,3 +162,40 @@ def generate_synthetic_data(res_dir, name, d, n, seed, test, valid):
 
     return [dataset, name]
 
+
+
+# # ====================================================================
+# # ==================== GENERATE CANCER DATASET ========================
+# # ====================================================================
+
+def generate_cancer_data(res_dir, name, d, n, seed, test, valid):
+
+    np.random.seed(seed)
+    jax.random.PRNGKey(seed)
+    dataset = {}
+
+    if not os.path.isdir(res_dir + '/' + name): os.mkdir(res_dir + '/' + name)
+    file = res_dir + '/' + name + '/' + name +'.npy'
+
+    dataset_pd = pd.read_csv("raw_data/cancer/cancer_reg.csv")
+    dataset_pd.binnedInc = dataset_pd.binnedInc.apply(lambda value: eval(value.replace("[", "(").replace("]", ")"))[0])
+    places = list(set(dataset_pd.Geography))
+    dataset_pd.Geography.replace(places, range(len(places)), inplace=True)
+    dataset_pd = dataset_pd.replace(np.nan, 0)
+    target = dataset_pd.TARGET_deathRate
+    data = dataset_pd.drop(columns=['TARGET_deathRate'], axis=1)
+    X_all = data.to_numpy().astype(float)
+    y_all = target.to_numpy().reshape(-1, 1)
+
+    X_all = PCA(n_components=d).fit_transform(X_all)
+    y_all = y_all - np.mean(y_all)
+
+    idxs = np.random.choice(len(X_all), n, replace=False)
+    dataset['X'] = [X_all[i] for i in range(len(X_all)) if i in idxs]
+    dataset['Y'] = [y_all[i] for i in range(len(y_all)) if i in idxs]
+
+    X_train, dataset['test_x'], y_train, dataset['test_y'] = list_train_test_split(dataset['X'], dataset['Y'], n_test=int(n*test), seed=seed)
+    dataset['train_x'], dataset['valid_x'], dataset['train_y'], dataset['valid_y'] = list_train_test_split(X_train, y_train, n_test=int(len(X_train)*valid), seed=seed)
+
+    np.save(file, dataset)
+    print('Dataset ' + name + ' has been generated.')

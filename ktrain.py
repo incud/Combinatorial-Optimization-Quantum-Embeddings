@@ -102,6 +102,8 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
         opt_state = adam_optimizer.init(params)
         valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
         train_x = np.array(dataset['train_x'])
+        valid_y = np.array(dataset['train_y'] + dataset['valid_y']).ravel()
+        train_y = np.array(dataset['train_y']).ravel()
         start = time.process_time()
 
         sys.stdout.write('\033[K' + 'Training started. --- Estimated time left: H:mm:ss.dddddd' + '\r')
@@ -114,13 +116,13 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
                 K_v = pennylane_projected_quantum_kernel(
                     lambda x, wires: trainable_embedding(x, params, layers, wires=wires),
                     valid_x, train_x)
-                cost, grad_circuit = jax.value_and_grad(lambda theta: accuracy_svr(K, K_v, dataset['train_y'],  dataset['train_y']+dataset['valid_y']))(params)
+                cost, grad_circuit = jax.value_and_grad(lambda theta: accuracy_svr(K, K_v, train_y, valid_y))(params)
 
             else:
                 # train on full training set without validation
                 K = pennylane_projected_quantum_kernel(
                     lambda x, wires: trainable_embedding(x, params, layers, wires=wires), valid_x)
-                cost, grad_circuit = jax.value_and_grad(lambda theta: k_target_alignment(K, np.array(dataset['train_y']+dataset['valid_y'])))(params)
+                cost, grad_circuit = jax.value_and_grad(lambda theta: k_target_alignment(K, valid_y))(params)
 
             updates, opt_state = adam_optimizer.update(grad_circuit, opt_state)
             params = optax.apply_updates(params, updates)
@@ -167,16 +169,16 @@ def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, 
             old_gen = int(pretrained.split('_')[1])
 
         valid_x = np.array(dataset['train_x'] + dataset['valid_x'])
-        valid_y = np.array(dataset['train_y'] + dataset['valid_y'])
+        valid_y = np.array(dataset['train_y'] + dataset['valid_y']).ravel()
         if metric == 'mse':
-            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']), d, layers, v_thr,
+            ge = GeneticEmbedding(np.array(dataset['train_x']), np.array(dataset['train_y']).ravel(), d, layers, v_thr,
                                   num_parents_mating=int(spp * npm),
                                   num_generations=gens - old_gen,
                                   solution_per_population=spp,
                                   initial_population=init_pop,
                                   fitness_mode='mse',
                                   validation_X=np.array(dataset['valid_x']),
-                                  validation_y=np.array(dataset['valid_y']),
+                                  validation_y=np.array(dataset['valid_y']).ravel(),
                                   threshold_mode=thr_mode,
                                   verbose='minimal')
         elif metric == 'kta':

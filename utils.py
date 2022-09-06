@@ -1,3 +1,4 @@
+# test
 import jax
 import os
 from jax.config import config
@@ -13,6 +14,22 @@ import numpy.linalg as la
 # import optax
 # from pathlib import Path
 # import quask
+
+
+
+# function to split dataset in training and test
+def list_train_test_split(X, y, n_test, seed):
+    np.random.seed(seed)
+    jax.random.PRNGKey(seed)
+
+    idxs_test = np.random.choice(len(X), n_test, replace=False)
+
+    train_x = [X[i] for i in range(len(X)) if i not in idxs_test]
+    train_y = [y[i] for i in range(len(X)) if i not in idxs_test]
+    test_x = [X[i] for i in idxs_test]
+    test_y = [y[i] for i in idxs_test]
+
+    return train_x, test_x, train_y, test_y
 
 
 
@@ -103,6 +120,7 @@ def accuracy_svc(gram, gram_test, y, y_test):
 
 
 
+# load pretrained kernel with higher training epochs (or generations) ad same hyper parameters
 def find_pretrained(path, name):
     namel = (name + '.npy').split('_')
     namel.pop(1)
@@ -119,50 +137,71 @@ def find_pretrained(path, name):
 
 
 
+# compute key for grouping in dictionaries or labeling series in plots
+def compute_key(name, differentiate, type_obj):
+    key = ''
+    if type_obj == 'dataset':
+        if differentiate == 'dataset':
+            key = name.split('_')[0]
+        elif differentiate == 'all':
+            if name.split('_')[0] == 'synt':
+                key = name.split('_')[0] + ' d=' + name.split('_')[2] + ' N=' + name.split('_')[1]
+
+    elif type_obj == 'kernel':
+        if differentiate == 'kernel':
+            key = name.split('_')[0]
+        elif differentiate == 'all':
+            if name.split('_')[0] == 'genetic':
+                key = name.split('_')[0] + ' ' + name.split('_')[5] + ' threshold (' + name.split('_')[6] + ')'
+            elif name.split('_')[0] == 'trainable':
+                key = name.split('_')[0] + ' (' + name.split('_')[2] + ')'
+            elif name.split('_')[0] == 'random':
+                key = name.split('_')[0]
+
+    return key
+
+
 # # ====================================================================
 # # ==================== LOAD DATASET ==================================
 # # ====================================================================
 
 def load_dataset(file, type):
-    if type == 'synt':
-        return load_synthetic(file)
-    elif type == 'mnist':
-        return load_mnist(file)
-
-
-
-# load synthetic dataset
-def load_synthetic(file):
     dataset = {}
     filedata = np.load(file, allow_pickle=True)
-    dataset['X'] = filedata.item().get('X')
-    dataset['weights_shape'] = filedata.item().get('weights_shape')
-    dataset['weights'] = filedata.item().get('weights')
-    dataset['Y'] = filedata.item().get('Y')
     dataset['train_x'] = filedata.item().get('train_x')
     dataset['train_y'] = filedata.item().get('train_y')
     dataset['test_x'] = filedata.item().get('test_x')
     dataset['test_y'] = filedata.item().get('test_y')
     dataset['valid_x'] = filedata.item().get('valid_x')
     dataset['valid_y'] = filedata.item().get('valid_y')
+
+    if type == 'synt':
+        return load_synthetic(filedata, dataset)
+    elif type == 'mnist':
+        return load_mnist(file)
+    else:
+        dataset['X'] = filedata.item().get('X')
+        dataset['Y'] = filedata.item().get('Y')
+        return dataset
+
+
+
+# load synthetic dataset
+def load_synthetic(filedata, dataset):
+    dataset['X'] = filedata.item().get('X')
+    dataset['weights_shape'] = filedata.item().get('weights_shape')
+    dataset['weights'] = filedata.item().get('weights')
+    dataset['Y'] = filedata.item().get('Y')
     return dataset
 
 
 
 # load mnist dataset
-def load_mnist(file):
-    dataset = {}
-    filedata = np.load(file, allow_pickle=True)
+def load_mnist(filedata, dataset):
     dataset['XC1'] = filedata.item().get('XC1')
     dataset['XC2'] = filedata.item().get('XC2')
     dataset['YC1'] = filedata.item().get('YC1')
     dataset['YC2'] = filedata.item().get('YC2')
-    dataset['train_x'] = filedata.item().get('train_x')
-    dataset['train_y'] = filedata.item().get('train_y')
-    dataset['test_x'] = filedata.item().get('test_x')
-    dataset['test_y'] = filedata.item().get('test_y')
-    dataset['valid_x'] = filedata.item().get('valid_x')
-    dataset['valid_y'] = filedata.item().get('valid_y')
     return dataset
 
 
