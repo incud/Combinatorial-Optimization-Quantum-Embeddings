@@ -1,6 +1,9 @@
 import sys
 import json
 from jax.config import config
+
+from quask.template_pennylane import GeneticEmbeddingUnstructured
+
 config.update("jax_enable_x64", True)
 import numpy as np
 from pathlib import Path
@@ -330,7 +333,10 @@ def conf_process(file):
                 params['params'] = kernels[data][kernel]['trained_params']
             elif kernel.split('_')[0] == 'genetic':
                 params['best_solution'] = kernels[data][kernel]['best_solution']
-                ge = GeneticEmbedding(datasets[data]['test_x'], datasets[data]['test_y'], len(val), len(val), 0.01, num_parents_mating=1)
+                if kernel.split('_')[7] == 'unstructured':
+                    ge = GeneticEmbeddingUnstructured(datasets[data]['test_x'], datasets[data]['test_y'], len(val), len(val), 0.01, num_parents_mating=1)
+                else:
+                    ge = GeneticEmbedding(datasets[data]['test_x'], datasets[data]['test_y'], len(val), len(val), 0.01, num_parents_mating=1)
             plot_quantum_feature_map(data, kernel, val, params, ge)
 
     print('\n##### CIRCUITS REPRESENTATION GENERATED #####\n')

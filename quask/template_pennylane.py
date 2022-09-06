@@ -621,16 +621,17 @@ class GeneticEmbedding:
         self.count = 0
         self.threshold_mode = threshold_mode
         self.all_variance_list = []
+        self.max_fit = 'NONE'
 
         def prep_variance_computation():
             n = np.shape(self.X)[0]
-            self.variance_idxs = [[],[]]
-            idxs = np.random.choice(range(int((n*(n-1))/2)), int(np.log2(n*n)), replace = False)
+            self.variance_idxs = [[], []]
+            idxs = np.random.choice(range(int((n * (n - 1)) / 2)), int(np.log2(n * n)), replace=False)
             for i in idxs:
                 row = 0
                 column = n - 1
                 c = column
-                while i > c and c != int((n*(n-1))/2)-1:
+                while i > c and c != int((n * (n - 1)) / 2) - 1:
                     column -= 1
                     row += 1
                     c += column
@@ -650,58 +651,47 @@ class GeneticEmbedding:
                 if len(variance_list) > 0:
                     mean = np.mean(variance_list)
                     std_dev = np.std(variance_list)
-                    prob = 1 - self.num_parents_mating/self.solution_per_population
+                    prob = 1 - self.num_parents_mating / self.solution_per_population
                     self.kernel_concentration_threshold = norm.ppf(prob, loc=mean, scale=std_dev)
 
             prep_variance_computation()
             if self.threshold_mode == 'adaptive': update_threshold(self.all_variance_list)
             self.all_variance_list = []
-            end = time.process_time()
             self.count += 1
             if self.verbose == True:
                 print(self.low_variance_list[len(self.low_variance_list) - 2])
                 print(f'F:{np.min(population_fitness)}-{np.max(population_fitness)} ', end='', flush=True)
             elif self.verbose == 'minimal':
-                max_var = 'NONE'
-                if self.low_variance_list[len(self.low_variance_list) - 2]: max_var = str(max(self.low_variance_list[len(self.low_variance_list) - 2]))
-                sys.stdout.write('\033[K' + 'Remaining generation: ' + str(self.num_generations - self.count) +
-                                 ' --- Max fitness: ' + str(np.max(population_fitness)) +
-                                 ' --- Max variance (excluded samples): ' + max_var +
-                                 ' --- Estimated time left: ' + str(timedelta(seconds=(self.num_generations - self.count) * (end - self.start) / self.count)) +
-                                 ' ')
+                self.max_fit =  str(np.max(population_fitness))
+                self.display_progress('F')
 
         def on_parents(ga_instance, selected_parents):
             if self.verbose == True:
-                print('P', end='', flush=True)
-                print(len(selected_parents))
+                self.display_progress('P '+ str(len(selected_parents)))
             elif self.verbose == 'minimal':
-                sys.stdout.write('P')
+                self.display_progress('P')
 
         def on_crossover(ga_instance, offspring_crossover):
             if self.verbose == True:
-                print('C', end='', flush=True)
-                print(len(offspring_crossover))
+                self.display_progress('C '+ str(len(offspring_crossover)))
             elif self.verbose == 'minimal':
-                sys.stdout.write('C')
+                self.display_progress('C')
 
         def on_mutation(ga_instance, offspring_mutation):
             if self.verbose == True:
-                print('M', end='', flush=True)
-                print(len(offspring_mutation))
+                self.display_progress('M ' + str(len(offspring_mutation)))
             elif self.verbose == 'minimal':
-                sys.stdout.write('M')
+                self.display_progress('M')
 
         def on_generation(ga_instance):
             if self.verbose == True:
-                print('G', end='\n', flush=True)
-                print(len(ga_instance.population))
+                self.display_progress('G ' + str(len(ga_instance.population)))
             elif self.verbose == 'minimal':
-                sys.stdout.write('G\r')
+                self.display_progress('G')
 
         def on_stop(ga_instance, last_population_fitness):
             self.count = 0
-            if self.verbose == True:
-                print('X', end='\n', flush=True)
+            self.display_progress('X')
 
         self.ga = pygad.GA(
             fitness_func=lambda sol, sol_idx: self.fitness(sol, sol_idx),
@@ -730,6 +720,21 @@ class GeneticEmbedding:
             on_stop=on_stop
         )
 
+    def display_progress(self, message):
+        if self.verbose == True:
+            sys.stdout.write(message + '\n')
+        elif self.verbose == 'minimal':
+            end = time.process_time()
+            max_var = 'NONE'
+            if self.low_variance_list[len(self.low_variance_list) - 2]: max_var = str(
+                max(self.low_variance_list[len(self.low_variance_list) - 2]))
+            sys.stdout.write('\033[K' + 'Remaining generation: ' + str(self.num_generations - self.count) +
+                             ' --- Max fitness: ' + self.max_fit +
+                             ' --- Max variance (excluded samples): ' + max_var +
+                             ' --- Estimated time left: ' + str(
+                timedelta(seconds=(self.num_generations - self.count) * (end - self.start) / self.count)) +
+                             ' ' + message + '\r')
+
 
     # compute variance of pre-selected gram matrix entries
     def compute_variance(self, feat_map, X_1, X_2, params=[1.0]):
@@ -747,16 +752,16 @@ class GeneticEmbedding:
         operations = []
         # constants
         for i in range(constant_ticks):
-            operations.append(lambda _: np.pi * (i + 1) / constant_ticks)
+            operations.append(lambda _, i=i: np.pi * (i + 1) / constant_ticks)
         # first degree operations
         for i in range(self.n_features):
-            operations.append(lambda x: x[i])
-            if include_inverse: operations.append(lambda x: np.pi - x[i])
+            operations.append(lambda x, i=i: x[i])
+            if include_inverse: operations.append(lambda x, i=i: np.pi - x[i])
         # second degree operations
         for i in range(self.n_features):
             for j in range(self.n_features):
-                operations.append(lambda x: x[i] * x[j])
-                if include_inverse:  operations.append(lambda x: (np.pi - x[i]) * (np.pi - x[j]))
+                operations.append(lambda x, i=i, j=j: x[i] * x[j])
+                if include_inverse:  operations.append(lambda x, i=i, j=j: (np.pi - x[i]) * (np.pi - x[j]))
         return operations
 
     def get_genes(self):
@@ -857,3 +862,232 @@ class GeneticEmbedding:
             True if the matrix is unitary, False otherwise
         """
         return np.allclose(np.eye(m.shape[0]), m.dot(m.conj().T))
+
+
+
+### GE 2
+class GeneticEmbeddingUnstructured(GeneticEmbedding):
+
+    def __init__(self, X, y, n_qubits, layers, kernel_concentration_threshold,
+                 bandwidth=1.0,
+                 num_generations=50,
+                 num_parents_mating=5,
+                 solution_per_population=4,
+                 parent_selection_type="sss",
+                 crossover_type="single_point",
+                 mutation_type="random",
+                 mutation_percent_genes=10,
+                 fitness_mode='kta',
+                 validation_X = None,
+                 validation_y = None,
+                 initial_population = None,
+                 threshold_mode = 'constant',
+                 verbose = True,
+                 blank_portion=0.2):
+
+        self.X = X
+        self.y = y
+        self.n_features = len(X[0])
+        self.n_qubits = n_qubits
+        self.operations = self.create_operations(blank_portion=blank_portion)
+        self.range_operation = len(self.operations)
+        self.range_gene = self.n_qubits * self.n_qubits * self.N_PAULIS * self.N_PAULIS * self.range_operation
+        self.bandwidth = bandwidth
+        self.fitness_mode = fitness_mode
+        self.kernel_concentration_threshold = kernel_concentration_threshold
+        self.layers = layers
+        self.num_generations = num_generations
+        self.num_parents_mating = num_parents_mating
+        self.solution_per_population = solution_per_population
+        self.validation_X = validation_X
+        self.validation_y = validation_y
+        self.variance_idxs = [[],[]]
+        self.low_variance_list = []
+        self.initial_population = initial_population
+        self.verbose = verbose
+        self.start = time.process_time()
+        self.count = 0
+        self.threshold_mode = threshold_mode
+        self.all_variance_list = []
+        self.max_fit = 'NONE'
+
+        def prep_variance_computation():
+            n = np.shape(self.X)[0]
+            self.variance_idxs = [[], []]
+            idxs = np.random.choice(range(int((n * (n - 1)) / 2)), int(np.log2(n * n)), replace=False)
+            for i in idxs:
+                row = 0
+                column = n - 1
+                c = column
+                while i > c and c != int((n * (n - 1)) / 2) - 1:
+                    column -= 1
+                    row += 1
+                    c += column
+                self.variance_idxs[0].append(row)
+                self.variance_idxs[1].append(n + i - c - 1)
+            self.low_variance_list.append([])
+
+        def on_start(ga_instance):
+            prep_variance_computation()
+            self.start = time.process_time()
+            if self.verbose == True:
+                print('S', end='\n', flush=True)
+
+        def on_fitness(ga_instance, population_fitness):
+
+            def update_threshold(variance_list):
+                if len(variance_list) > 0:
+                    mean = np.mean(variance_list)
+                    std_dev = np.std(variance_list)
+                    prob = 1 - self.num_parents_mating / self.solution_per_population
+                    self.kernel_concentration_threshold = norm.ppf(prob, loc=mean, scale=std_dev)
+
+            prep_variance_computation()
+            if self.threshold_mode == 'adaptive': update_threshold(self.all_variance_list)
+            self.all_variance_list = []
+            self.count += 1
+            if self.verbose == True:
+                print(self.low_variance_list[len(self.low_variance_list) - 2])
+                print(f'F:{np.min(population_fitness)}-{np.max(population_fitness)} ', end='', flush=True)
+            elif self.verbose == 'minimal':
+                self.max_fit =  str(np.max(population_fitness))
+                self.display_progress('F')
+
+        def on_parents(ga_instance, selected_parents):
+            if self.verbose == True:
+                self.display_progress('P '+ str(len(selected_parents)))
+            elif self.verbose == 'minimal':
+                self.display_progress('P')
+
+        def on_crossover(ga_instance, offspring_crossover):
+            if self.verbose == True:
+                self.display_progress('C '+ str(len(offspring_crossover)))
+            elif self.verbose == 'minimal':
+                self.display_progress('C')
+
+        def on_mutation(ga_instance, offspring_mutation):
+            if self.verbose == True:
+                self.display_progress('M ' + str(len(offspring_mutation)))
+            elif self.verbose == 'minimal':
+                self.display_progress('M')
+
+        def on_generation(ga_instance):
+            if self.verbose == True:
+                self.display_progress('G ' + str(len(ga_instance.population)))
+            elif self.verbose == 'minimal':
+                self.display_progress('G')
+
+        def on_stop(ga_instance, last_population_fitness):
+            self.count = 0
+            if self.verbose == True:
+                self.display_progress('X')
+
+
+        self.ga = pygad.GA(
+            fitness_func=lambda sol, sol_idx: self.fitness(sol, sol_idx),
+            num_genes=self.get_genes(),
+            gene_type=int,
+            gene_space=range(self.get_range_gene()),
+            init_range_low=0,
+            init_range_high=self.get_range_gene() - 1,
+            num_generations=self.num_generations,
+            num_parents_mating=self.num_parents_mating,
+            sol_per_pop=self.solution_per_population,
+            parent_selection_type=parent_selection_type,
+            keep_parents=-1,
+            crossover_type=crossover_type,
+            mutation_type=mutation_type,
+            mutation_percent_genes=mutation_percent_genes,
+            save_solutions=True,
+            save_best_solutions=True,
+            initial_population=initial_population,
+            on_start=on_start,
+            on_fitness=on_fitness,
+            on_parents=on_parents,
+            on_crossover=on_crossover,
+            on_mutation=on_mutation,
+            on_generation=on_generation,
+            on_stop=on_stop
+        )
+
+    def create_operations(self, blank_portion, include_inverse=False):
+        operations = []
+        constant_ticks = 4
+        # constants
+        for i in range(constant_ticks):
+            operations.append(lambda _, i=i: np.pi * (i + 1) / constant_ticks)
+        # first degree operations
+        for c in range(self.n_features):
+            operations.append(lambda x, c=c: x[c])
+            if include_inverse: operations.append(lambda x, c=c: np.pi - x[c])
+        # second degree operations
+        for d in range(self.n_features):
+            for j in range(self.n_features):
+                operations.append(lambda x, d=d, j=j: x[d] * x[j])
+                if include_inverse:  operations.append(lambda x, d=d, j=j: (np.pi - x[d]) * (np.pi - x[j]))
+
+        # operations.append(lambda x: 'CNOT')
+        # if include_inverse: operations.append(lambda x: 'CNOT')
+
+        op_len = len(operations)
+        for i in range(int(op_len * blank_portion)):
+            operations.append(lambda x: None)
+
+        return operations
+
+    def get_genes(self):
+        return self.n_features * self.layers
+
+    def get_range_gene(self):
+        return self.range_gene
+
+    def get_range_operation(self):
+        return self.range_operation
+
+    def transform_solution_to_embedding(self, x, solution):
+        for i, gene in enumerate(solution):
+            self.apply_operation(gene, x)
+
+    def unpack_gene(self, gene):
+        # self.range_gene = self.n_qubits * self.n_qubits * self.N_PAULIS * self.N_PAULIS * len(self.operations)
+        wire_1 = gene // (self.n_qubits * self.N_PAULIS * self.N_PAULIS * self.range_operation)
+        tmp = gene % (self.n_qubits * self.N_PAULIS * self.N_PAULIS * self.range_operation)
+        wire_2 = tmp // (self.N_PAULIS * self.N_PAULIS * self.range_operation)
+        tmp = tmp % (self.N_PAULIS * self.N_PAULIS * self.range_operation)
+        pauli_1 = tmp // (self.N_PAULIS * self.range_operation)
+        tmp = tmp % (self.N_PAULIS * self.range_operation)
+        pauli_2 = tmp // self.range_operation
+        operation_index = tmp % self.range_operation
+        return wire_1, wire_2, pauli_1, pauli_2, operation_index
+
+
+    def apply_operation(self, gene, x):
+
+        wire_1, wire_2, pauli_1, pauli_2, operation_index = self.unpack_gene(gene)
+        wires = (wire_1, wire_2)
+
+        val = self.operations[operation_index](x)
+        if not val: return
+
+        # if val == 'CNOT':
+        #     if wire_1 == wire_2: return
+        #     qml.CNOT(wires=wires)
+        #     return
+
+        angle = self.bandwidth * val
+        if operation_index >= (4 + self.n_features):
+            wires = wire_1
+            if pauli_1 == 0:
+                qml.Identity(wires=wires)
+            elif pauli_1 == 1:
+                qml.RX(angle, wires=wires)
+            elif pauli_1 == 2:
+                qml.RY(angle, wires=wires)
+            elif pauli_1 == 3:
+                qml.RZ(angle, wires=wires)
+        else:
+            if wire_1 == wire_2: return
+            unitary = expm(-1j * angle * np.kron(self.PAULIS[pauli_1], self.PAULIS[pauli_2]))
+            assert self.is_unitary(unitary)
+            qml.QubitUnitary(unitary, wires=wires)
+
