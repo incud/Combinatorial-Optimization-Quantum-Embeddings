@@ -691,7 +691,8 @@ class GeneticEmbedding:
 
         def on_stop(ga_instance, last_population_fitness):
             self.count = 0
-            self.display_progress('X')
+            if self.verbose == True:
+                self.display_progress('X')
 
         self.ga = pygad.GA(
             fitness_func=lambda sol, sol_idx: self.fitness(sol, sol_idx),
