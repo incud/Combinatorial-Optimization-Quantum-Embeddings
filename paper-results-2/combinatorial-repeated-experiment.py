@@ -33,9 +33,9 @@ def get_next_seed():
     return int(ret)
 
 
-DATASET_PATH = "paper-results/datasets"
-INTERMEDIATE_PATH = "paper-results/intermediate"
-PLOT_PATH = "paper-results/plots"
+DATASET_PATH = "paper-results-2/datasets"
+INTERMEDIATE_PATH = "paper-results-2/intermediate"
+PLOT_PATH = "paper-results-2/plots"
 np.save(f"{INTERMEDIATE_PATH}/SIMULATION_SEED.npy", SIMULATION_SEED)
 REFRESH_DATASET = False
 REFRESH_INTERMEDIATE = False
@@ -91,25 +91,25 @@ save_datasets(f"{DATASET_PATH}/function_approximation_meyer_wavelet", dataset, 2
 dataset = load_who_life_expectancy_dataset()
 reset_seed(54562)
 print(f"Dataset 'life expectancy' has {dataset['X'].shape[0]} elements with {dataset['X'].shape[1]} features")
-save_datasets(f"{DATASET_PATH}/life_expectancy", dataset, 5, 180)
+save_datasets(f"{DATASET_PATH}/life_expectancy", dataset, 5, 150)
 # save_datasets(f"{DATASET_PATH}/life_expectancy", dataset, 3, 15)
 
 dataset = load_medical_bill_dataset()
 reset_seed(39284)
 print(f"Dataset 'medical bill' has {dataset['X'].shape[0]} elements with {dataset['X'].shape[1]} features")
-save_datasets(f"{DATASET_PATH}/medical_bill", dataset, 5, 180)
+save_datasets(f"{DATASET_PATH}/medical_bill", dataset, 5, 150)
 # save_datasets(f"{DATASET_PATH}/medical_bill", dataset, 3, 15)
 
 dataset = load_ols_cancer_dataset()
 reset_seed(19475)
 print(f"Dataset 'ols cancer' has {dataset['X'].shape[0]} elements with {dataset['X'].shape[1]} features")
-save_datasets(f"{DATASET_PATH}/ols_cancer", dataset, 5, 180)
+save_datasets(f"{DATASET_PATH}/ols_cancer", dataset, 5, 150)
 # save_datasets(f"{DATASET_PATH}/ols_cancer", dataset, 3, 15)
 
 dataset = load_real_estate_dataset()
 reset_seed(24298)
 print(f"Dataset 'real estate' has {dataset['X'].shape[0]} elements with {dataset['X'].shape[1]} features")
-save_datasets(f"{DATASET_PATH}/real_estate", dataset, 5, 180)
+save_datasets(f"{DATASET_PATH}/real_estate", dataset, 5, 150)
 # save_datasets(f"{DATASET_PATH}/real_estate", dataset, 3, 15)
 
 
@@ -173,6 +173,9 @@ def run_combinatorial_sa_kernel(save_path, X_train, X_validation, X_test, y_trai
     gram_train = ck.get_kernel_values(X_train)
     gram_test = ck.get_kernel_values(X_test, X_train)
     mse = ck.estimate_mse(X_test=X_test, y_test=y_test)
+    np.save(f"{save_path}/final_solution.npy", ck.state)
+    np.save(f"{save_path}/energy_calculation_performed.npy", np.array(ck.energy_calculation_performed))
+    np.save(f"{save_path}/energy_calculation_discarded.npy", np.array(ck.energy_calculation_discarded))
     np.save(f"{save_path}/gram_train.npy", gram_train)
     np.save(f"{save_path}/gram_test.npy", gram_test)
     np.save(f"{save_path}/mse.npy", np.array(mse))
@@ -189,6 +192,9 @@ def run_combinatorial_greedy_kernel(save_path, X_train, X_validation, X_test, y_
     gram_train = ck.get_kernel_values(X_train)
     gram_test = ck.get_kernel_values(X_test, X_train)
     mse = ck.estimate_mse(X_test=X_test, y_test=y_test)
+    np.save(f"{save_path}/final_solution.npy", ck.solution)
+    np.save(f"{save_path}/energy_calculation_performed.npy", np.array(ck.energy_calculation_performed))
+    np.save(f"{save_path}/energy_calculation_discarded.npy", np.array(ck.energy_calculation_discarded))
     np.save(f"{save_path}/gram_train.npy", gram_train)
     np.save(f"{save_path}/gram_test.npy", gram_test)
     np.save(f"{save_path}/mse.npy", np.array(mse))
@@ -223,6 +229,7 @@ def run_simulations(n_layers, epochs, lr, repetitions=10):
             print(f"Random kernel starts at {timing['random_kernel_start']}")
             seed = get_next_seed()
             reset_seed(seed)
+            Path(f"{INTERMEDIATE_PATH}/{dataset}/random_kernel/{repetition}").mkdir(exist_ok=True)
             run_random_kernel(f"{INTERMEDIATE_PATH}/{dataset}/random_kernel/{repetition}", X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, seed)
             timing['random_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -239,56 +246,61 @@ def run_simulations(n_layers, epochs, lr, repetitions=10):
             print(f"Combinatorial (sa) kernel starts at {timing['combinatorial_sa_kernel_start']}")
             seed = get_next_seed()
             reset_seed(seed)
+            Path(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_sa_kernel/{repetition}").mkdir(exist_ok=True)
             run_combinatorial_sa_kernel(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_sa_kernel/{repetition}",
                 X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, initial_solution, epochs)
             timing['combinatorial_sa_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
-            timing['combinatorial_greedy_kernel_start'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-            print(f"Combinatorial (greedy) kernel starts at {timing['combinatorial_greedy_kernel_start']}")
-            seed = get_next_seed()
-            reset_seed(seed)
-            run_combinatorial_greedy_kernel(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_greedy_kernel/{repetition}",
-                X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, initial_solution)
-            timing['combinatorial_greedy_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            # timing['combinatorial_greedy_kernel_start'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            # print(f"Combinatorial (greedy) kernel starts at {timing['combinatorial_greedy_kernel_start']}")
+            # seed = get_next_seed()
+            # reset_seed(seed)
+            # Path(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_greedy_kernel/{repetition}").mkdir(exist_ok=True)
+            # run_combinatorial_greedy_kernel(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_greedy_kernel/{repetition}",
+            #     X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, initial_solution)
+            # timing['combinatorial_greedy_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
             json.dump(timing, open(f"{INTERMEDIATE_PATH}/{dataset}/timing.json", "w"))
 
 
-run_simulations(3, 1000, 0.01, 10)
+# run_simulations(3, 1000, 0.01, 10)
 
 
 # =====================================================================================
 # 3. GENERATE PLOTS ===================================================================
 # =====================================================================================
 
-# FIX PATH!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-def generate_plots(intermediate_path, plot_path, allow_partial_fold=True):
 
-    FOLDS = ["TR1-V2-TE3", "TR1-V3-TE2", "TR2-V1-TE3", "TR2-V3-TE1", "TR3-V1-TE2", "TR3-V2-TE1"]
+def generate_plots(intermediate_path, plot_path, repetitions, allow_partial_fold=True):
+
     DATASETS = ["fish_market", "life_expectancy", "medical_bill", "ols_cancer", "real_estate",
                 "function_approximation_meyer_wavelet", "function_approximation_sin_squared",
                 "function_approximation_step"]
-    TECHNIQUES = ['random_kernel', 'trainable_kernel', 'combinatorial_sa_kernel', 'combinatorial_greedy_kernel']
+    TECHNIQUES = ['random_kernel', 'combinatorial_sa_kernel']
 
     for dataset in DATASETS:
         mse_dataset = {technique: [] for technique in TECHNIQUES}
 
         # load data
-        for fold in FOLDS:
-            for technique in TECHNIQUES:
-                if Path(f"{intermediate_path}/{dataset}/{fold}/{technique}/mse.npy").exists():
-                    mse = np.load(f"{intermediate_path}/{dataset}/{fold}/{technique}/mse.npy")
+        for technique in TECHNIQUES:
+            for rep in range(repetitions):
+                if Path(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy").exists():
+                    mse = np.load(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy")
                     mse_dataset[technique].append(mse)
                 elif allow_partial_fold:
-                    print(f"Warning: dataset {dataset} has missing {fold=} {technique=}")
+                    print(f"Warning: dataset {dataset} has missing {technique=} {rep=}")
                 else:
-                    assert False, f"Warning: dataset {dataset} has missing {fold=} {technique=}"
+                    assert False, f"Warning: dataset {dataset} has missing {technique=} {rep=}"
+            mse_dataset[technique] = np.array(mse_dataset[technique])
+            mse_dataset[technique] = mse_dataset[technique][mse_dataset[technique] < np.inf]
 
         mse_items = list(mse_dataset.items())
         mse_items = [(k, v) for (k, v) in mse_items if len(v) > 0]
         if not mse_items:
-            print(f"Warining: {dataset=} has not be processed at all")
+            print(f"Warning: {dataset=} has not be processed at all")
             continue
+
+        print(f"{dataset=} {mse_items=}")
 
         # plot graph
         plt.figure()
@@ -308,4 +320,4 @@ def generate_plots(intermediate_path, plot_path, allow_partial_fold=True):
         plt.close()
 
 
-# generate_plots(INTERMEDIATE_PATH, PLOT_PATH)
+generate_plots(INTERMEDIATE_PATH, PLOT_PATH, repetitions=10)
