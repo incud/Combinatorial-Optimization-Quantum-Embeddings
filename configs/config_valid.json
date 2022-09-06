@@ -1,0 +1,39 @@
+{
+  "base_dir": "experiments-results",
+  "experiments": [
+    {
+      "dataset": {
+        "type": "cancer",
+        "samples": 150,
+        "features": 5,
+        "seed": 12347,
+        "testset": 0.334,
+        "validationset": 0.2
+      },
+      "training": [
+        {
+          "type": "genetic",
+          "generations": 50,
+          "spp": 20,
+          "npm": 0.2,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "mse",
+          "structure": "unstructured",
+          "seed": 24604
+        },
+        {
+          "type": "genetic",
+          "generations": 50,
+          "spp": 20,
+          "npm": 0.2,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "mse",
+          "structure": "fixed",
+          "seed": 24604
+        }
+      ]
+    }
+  ]
+}

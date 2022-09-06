@@ -662,7 +662,7 @@ class GeneticEmbedding:
                 print(self.low_variance_list[len(self.low_variance_list) - 2])
                 print(f'F:{np.min(population_fitness)}-{np.max(population_fitness)} ', end='', flush=True)
             elif self.verbose == 'minimal':
-                self.max_fit =  str(np.max(population_fitness))
+                self.max_fit = str(np.max(population_fitness))
                 self.display_progress('F')
 
         def on_parents(ga_instance, selected_parents):
@@ -729,12 +729,12 @@ class GeneticEmbedding:
             max_var = 'NONE'
             if self.low_variance_list[len(self.low_variance_list) - 2]: max_var = str(
                 max(self.low_variance_list[len(self.low_variance_list) - 2]))
-            sys.stdout.write('\033[K' + 'Remaining generation: ' + str(self.num_generations - self.count) +
+            print('\033[K' + 'Remaining generation: ' + str(self.num_generations - self.count) +
                              ' --- Max fitness: ' + self.max_fit +
                              ' --- Max variance (excluded samples): ' + max_var +
                              ' --- Estimated time left: ' + str(
                 timedelta(seconds=(self.num_generations - self.count) * (end - self.start) / self.count)) +
-                             ' ' + message + '\r')
+                             ' ' + message, end='\r')
 
 
     # compute variance of pre-selected gram matrix entries
@@ -837,9 +837,10 @@ class GeneticEmbedding:
 
         pauli_1, pauli_2, operation_index = self.unpack_gene(gene)
 
+        val = self.operations[operation_index](x)
         # calculate angle from data
         # print(f"Gene={gene} (max {self.get_range_gene()} | Operation index={operation_index} (max {self.get_range_operation()})")
-        angle = self.bandwidth * self.operations[operation_index](x)
+        angle = self.bandwidth * val
 
         if is_single_qubit:
             if pauli_1 == 0: qml.Identity(wires=wires)
@@ -848,7 +849,7 @@ class GeneticEmbedding:
             elif pauli_1 == 3: qml.RZ(angle, wires=wires)
         else:
             unitary = expm(-1j * angle * np.kron(self.PAULIS[pauli_1], self.PAULIS[pauli_2]))
-            assert self.is_unitary(unitary)
+            #assert self.is_unitary(unitary)
             qml.QubitUnitary(unitary, wires=wires)
 
     @staticmethod
