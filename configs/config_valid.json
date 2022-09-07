@@ -65,7 +65,7 @@
           "threshold_mode": "adaptive",
           "metric": "mse",
           "structure": "unstructured",
-          "cnot": "True",
+          "cnot": "cnot",
           "seed": 24604
         },
         {
@@ -75,9 +75,9 @@
           "npm": 0.2,
           "variance_threshold": 0.1,
           "threshold_mode": "adaptive",
-          "metric": "mse",
+          "metric": "kta",
           "structure": "unstructured",
-          "cnot": "True",
+          "cnot": "cnot",
           "seed": 24604
         }
       ]
