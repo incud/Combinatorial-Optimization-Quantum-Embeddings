@@ -45,7 +45,7 @@ def plot_quantum_feature_map(dataset, kernelname, val, params, ge):
 
 
 # scatter plot of accuracy and variance
-def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
+def plot_kernels_eigenvalues_variance(kernels, dataset, data, differentiate = 'kernel'):
     res_dict = {}
 
     f = plt.figure()
@@ -63,8 +63,25 @@ def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
     labels = []
     res = {}
     min_size = np.inf
+    max_eig = -np.inf
     for k in res_dict.keys():
         if min_size > len(res_dict[k]['kernels']): min_size = len(res_dict[k]['kernels'])
+        res_dict[k]['mean'] = 0
+        res_dict[k]['variance'] = 0
+        res_dict[k]['standard deviation'] = 0
+        res_dict[k]['eigevalues'] = []
+        res_dict[k]['acc'] = -np.inf
+        for i in res_dict[k]['kernels']:
+            y_train = data['train_y'] + data['valid_y']
+            y_test = data['test_y']
+            tmp_acc = accuracy_svr(i['K'], i['K_test'], np.ravel(y_train), np.ravel(y_test))
+            if res_dict[k]['acc'] < tmp_acc:
+                res_dict[k]['mean'] = np.mean(upper_tri_indexing(i['K']))
+                res_dict[k]['variance'] = np.var(upper_tri_indexing(i['K']))
+                res_dict[k]['standard deviation'] = np.std(upper_tri_indexing(i['K']))
+                res_dict[k]['eigenvalues'] = np.linalg.eigvals(i['K']).tolist()
+                res_dict[k]['acc'] = tmp_acc
+                if max_eig < max(res_dict[k]['eigenvalues']): max_eig = max(res_dict[k]['eigenvalues'])
 
     count = 0
     reskeys = [ k for k in res_dict.keys()]
@@ -93,6 +110,51 @@ def plot_kernels_eigenvalues(kernels, dataset, differentiate = 'kernel'):
     if not os.path.isdir(path): os.mkdir(path)
     plt.savefig(path + '/eigenvalues_density_' + differentiate + '.png')
     plt.close()
+
+
+    # variance means and standard dev
+    labels = ['mean', 'variance', 'standard deviation']
+    barw = 0.2
+    br_old = []
+    # Make the plot
+    for l in labels:
+        if len(br_old)==0:
+            br_old = np.arange(len(res_dict.keys()))
+            br = br_old
+        else:
+            br = [x + barw for x in br_old]
+            br_old = br
+
+        tmp = plt.bar(br, [res_dict[k][l] for k in res_dict.keys()], width=barw,
+                 edgecolor='white', label=l)
+
+        plt.bar_label(tmp, fmt='%.3f', fontsize=6)
+
+    # Adding Xticks
+    plt.xlabel('Quantum Kernels', fontweight='bold', fontsize=15)
+    plt.ylabel('Values', fontweight='bold', fontsize=15)
+    plt.xticks([r + barw for r in range(len(res_dict.keys()))],
+               res_dict.keys(), rotation = 45, fontsize=7)
+    plt.tight_layout()
+    plt.legend()
+    path = res_dir + '/' + dataset + '/plots'
+    if not os.path.isdir(path): os.mkdir(path)
+    plt.savefig(path + '/entries_metrics_' + dataset + '.png')
+    plt.close()
+
+
+    # histogram of best models
+    for k in reskeys:
+        gfg = sns.displot({k: res_dict[k]['eigenvalues']}, bins=range(-1, int(max_eig +2), max([1, int((max_eig +2)/10)])), rug=True, height=5, aspect=1.5)
+        gfg.set_axis_labels('Eigenvalues', 'Count')
+        gfg.tight_layout()
+        sns.move_legend(gfg, "upper right", bbox_to_anchor=(.8, .9))
+        plt.setp(gfg._legend.get_texts(), fontsize=8)
+
+        path = res_dir + '/' + dataset + '/plots'
+        if not os.path.isdir(path): os.mkdir(path)
+        plt.savefig(path + '/eigenvalues_hist_' + k + '.png')
+        plt.close()
 
     if differentiate == 'all':
         l = [i for i in range(0,len(res.keys())*3,3)]
@@ -295,8 +357,8 @@ def conf_process(file):
 
 
     for data in kernels.keys():
-        plot_kernels_eigenvalues(kernels[data], data)
-        plot_kernels_eigenvalues(kernels[data], data, differentiate='all')
+        plot_kernels_eigenvalues_variance(kernels[data], data, datasets[data])
+        plot_kernels_eigenvalues_variance(kernels[data], data, datasets[data], differentiate='all')
 
     print('\n##### SPECTRAL ANALYSIS COMPLETED #####\n')
 
