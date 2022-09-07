@@ -885,7 +885,8 @@ class GeneticEmbeddingUnstructured(GeneticEmbedding):
                  initial_population = None,
                  threshold_mode = 'constant',
                  verbose = True,
-                 blank_portion=0.2):
+                 blank_portion=0.2,
+                 cnot = False):
 
         self.X = X
         self.y = y
@@ -912,6 +913,7 @@ class GeneticEmbeddingUnstructured(GeneticEmbedding):
         self.threshold_mode = threshold_mode
         self.all_variance_list = []
         self.max_fit = 'NONE'
+        self.cnot = cnot
 
         def prep_variance_computation():
             n = np.shape(self.X)[0]
@@ -1028,14 +1030,18 @@ class GeneticEmbeddingUnstructured(GeneticEmbedding):
                 operations.append(lambda x, d=d, j=j: x[d] * x[j])
                 if include_inverse:  operations.append(lambda x, d=d, j=j: (np.pi - x[d]) * (np.pi - x[j]))
 
-        # operations.append(lambda x: 'CNOT')
-        # if include_inverse: operations.append(lambda x: 'CNOT')
+        if self.cnot:
+            operations.append(lambda x: 'CNOT')
+            if include_inverse: operations.append(lambda x: 'CNOT')
 
         op_len = len(operations)
         for i in range(int(op_len * blank_portion)):
             operations.append(lambda x: None)
 
         return operations
+
+    def use_cnot(self, val):
+        self.cnot = val
 
     def get_genes(self):
         return self.n_features * self.layers
@@ -1071,10 +1077,10 @@ class GeneticEmbeddingUnstructured(GeneticEmbedding):
         val = self.operations[operation_index](x)
         if not val: return
 
-        # if val == 'CNOT':
-        #     if wire_1 == wire_2: return
-        #     qml.CNOT(wires=wires)
-        #     return
+        if val == 'CNOT':
+             if wire_1 == wire_2: return
+             qml.CNOT(wires=wires)
+             return
 
         angle = self.bandwidth * val
         if operation_index >= (4 + self.n_features):

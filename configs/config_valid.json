@@ -32,6 +32,53 @@
           "metric": "mse",
           "structure": "fixed",
           "seed": 24604
+        },
+        {
+          "type": "genetic",
+          "generations": 50,
+          "spp": 20,
+          "npm": 0.2,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "kta",
+          "structure": "unstructured",
+          "seed": 24604
+        },
+        {
+          "type": "genetic",
+          "generations": 50,
+          "spp": 20,
+          "npm": 0.2,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "kta",
+          "structure": "fixed",
+          "seed": 24604
+        },
+
+        {
+          "type": "genetic",
+          "generations": 50,
+          "spp": 20,
+          "npm": 0.2,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "mse",
+          "structure": "unstructured",
+          "cnot": "True",
+          "seed": 24604
+        },
+        {
+          "type": "genetic",
+          "generations": 50,
+          "spp": 20,
+          "npm": 0.2,
+          "variance_threshold": 0.1,
+          "threshold_mode": "adaptive",
+          "metric": "mse",
+          "structure": "unstructured",
+          "cnot": "True",
+          "seed": 24604
         }
       ]
     }

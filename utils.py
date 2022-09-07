@@ -153,7 +153,9 @@ def compute_key(name, differentiate, type_obj):
             key = name.split('_')[0]
         elif differentiate == 'all':
             if name.split('_')[0] == 'genetic':
-                key = name.split('_')[0] + ' ' + name.split('_')[5] + ' threshold (' + name.split('_')[6] + ')'
+                details = name.split('_')[6]
+                if name.split('_')[8] == 'cnot': details = details + ' & CNOT'
+                key = name.split('_')[0] + ' ' + name.split('_')[7] + ' (' + details + ')'
             elif name.split('_')[0] == 'trainable':
                 key = name.split('_')[0] + ' (' + name.split('_')[2] + ')'
             elif name.split('_')[0] == 'random':

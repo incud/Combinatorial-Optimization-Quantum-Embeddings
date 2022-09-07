@@ -35,7 +35,17 @@ def train_kernel(k, path, dataname):
     elif k['type'] == 'trainable':
         train_trainable(splitteddata, k['epochs'], k['metric'], path + '/kernels/', name, k['seed'])
     elif k['type'] == 'genetic':
-        train_genetic(splitteddata, k['generations'], k['spp'], k['npm'], k['metric'], k['variance_threshold'], k['threshold_mode'], path + '/kernels/', name, k['seed'], k['structure'])
+        train_genetic(splitteddata,
+                      k['generations'],
+                      k['spp'],
+                      k['npm'],
+                      k['metric'],
+                      k['variance_threshold'],
+                      k['threshold_mode'],
+                      path + '/kernels/', name,
+                      k['seed'],
+                      k['structure'],
+                      False if 'cnot' not in k.keys() else k['cnot']=='True')
     else:
         print('Invalid kernel type: no data will be generated for this configuration.')
         return False, ''
@@ -141,7 +151,7 @@ def train_trainable(dataset, epochs, metric, path, name, seed):
 # ========= TRAIN QUANTUM KERNELS WITH GENETIC ALGORITHMS ============
 # ====================================================================
 
-def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, seed, structure):
+def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, seed, structure, cnot):
 
     np.random.seed(seed)
     jax.random.PRNGKey(seed)
@@ -198,6 +208,8 @@ def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, 
                                               fitness_mode='kta',
                                               threshold_mode=thr_mode,
                                               verbose='minimal')
+
+        if structure == 'unstructured': ge.use_cnot(cnot)
         ge.run()
         kerneldata['best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
         kerneldata['population'] = ge.ga.population
