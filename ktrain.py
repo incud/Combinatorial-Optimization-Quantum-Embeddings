@@ -45,7 +45,7 @@ def train_kernel(k, path, dataname):
                       path + '/kernels/', name,
                       k['seed'],
                       k['structure'],
-                      False if 'cnot' not in k.keys() else k['cnot']=='True')
+                      False if 'cnot' not in k.keys() else k['cnot']=='cnot')
     else:
         print('Invalid kernel type: no data will be generated for this configuration.')
         return False, ''
