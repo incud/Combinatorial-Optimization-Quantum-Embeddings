@@ -198,7 +198,8 @@ def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, 
                                   validation_X=np.array(dataset['valid_x']),
                                   validation_y=np.array(dataset['valid_y']).ravel(),
                                   threshold_mode=thr_mode,
-                                  verbose='minimal')
+                                  verbose='minimal',
+                                  cnot=cnot)
         elif metric == 'kta':
             ge = geclass(valid_x, valid_y, d, layers, v_thr,
                                               num_parents_mating=int(spp * npm),
@@ -207,9 +208,9 @@ def train_genetic(dataset, gens, spp, npm, metric, v_thr, thr_mode, path, name, 
                                               initial_population=init_pop,
                                               fitness_mode='kta',
                                               threshold_mode=thr_mode,
-                                              verbose='minimal')
+                                              verbose='minimal',
+                                              cnot=cnot)
 
-        if structure == 'unstructured': ge.use_cnot(cnot)
         ge.run()
         kerneldata['best_solution'], ge_best_solution_fitness, idx = ge.ga.best_solution()
         kerneldata['population'] = ge.ga.population

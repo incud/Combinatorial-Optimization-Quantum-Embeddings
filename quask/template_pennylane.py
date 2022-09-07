@@ -596,7 +596,8 @@ class GeneticEmbedding:
                  validation_y = None,
                  initial_population = None,
                  threshold_mode = 'constant',
-                 verbose = True):
+                 verbose = True,
+                 **kwargs):
         self.X = X
         self.y = y
         self.n_features = len(X[0])
@@ -888,6 +889,7 @@ class GeneticEmbeddingUnstructured(GeneticEmbedding):
                  blank_portion=0.2,
                  cnot = False):
 
+        self.cnot = cnot
         self.X = X
         self.y = y
         self.n_features = len(X[0])
@@ -913,7 +915,6 @@ class GeneticEmbeddingUnstructured(GeneticEmbedding):
         self.threshold_mode = threshold_mode
         self.all_variance_list = []
         self.max_fit = 'NONE'
-        self.cnot = cnot
 
         def prep_variance_computation():
             n = np.shape(self.X)[0]
@@ -1039,9 +1040,6 @@ class GeneticEmbeddingUnstructured(GeneticEmbedding):
             operations.append(lambda x: None)
 
         return operations
-
-    def use_cnot(self, val):
-        self.cnot = val
 
     def get_genes(self):
         return self.n_features * self.layers
