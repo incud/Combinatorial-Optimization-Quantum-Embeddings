@@ -1,4 +1,3 @@
-# test
 import jax
 import os
 from jax.config import config
@@ -67,7 +66,7 @@ def trainable_embedding(x, theta, layers, wires):
 
 # create quantum system that generates the labels
 @jax.jit
-def generate_label(x, weights):
+def generate_label(x, weights, verbose=False):
 
     N = len(x)
     device = qml.device("default.qubit.jax", wires=N)
@@ -79,7 +78,7 @@ def generate_label(x, weights):
         return qml.expval(qml.PauliZ(1))
 
     drawer = qml.draw(quantum_system)
-    print(drawer())
+    if verbose: print(drawer())
     return quantum_system()
 
 
@@ -146,13 +145,17 @@ def compute_key(name, differentiate, type_obj):
         elif differentiate == 'all':
             if name.split('_')[0] == 'synt':
                 key = name.split('_')[0] + ' d=' + name.split('_')[2] + ' N=' + name.split('_')[1]
+            elif name.split('_')[0] == 'cancer':
+                key = name.split('_')[0] + ' d=' + name.split('_')[2] + ' N=' + name.split('_')[1]
 
     elif type_obj == 'kernel':
         if differentiate == 'kernel':
             key = name.split('_')[0]
         elif differentiate == 'all':
             if name.split('_')[0] == 'genetic':
-                key = name.split('_')[0] + ' ' + name.split('_')[5] + ' threshold (' + name.split('_')[6] + ')'
+                details = name.split('_')[6]
+                if name.split('_')[8] == 'cnot': details = details + ' & CNOT'
+                key = name.split('_')[0] + ' ' + name.split('_')[7] + ' (' + details + ')'
             elif name.split('_')[0] == 'trainable':
                 key = name.split('_')[0] + ' (' + name.split('_')[2] + ')'
             elif name.split('_')[0] == 'random':
@@ -250,5 +253,6 @@ def load_genetick(file):
     kernel['K_test'] = filedata.item().get('K_test')
     kernel['best_solution'] = filedata.item().get('best_solution')
     kernel['population'] = filedata.item().get('population')
+    kernel['v_thr'] = filedata.item().get('v_thr')
     kernel['low_variance_list'] = filedata.item().get('low_variance_list')
     return kernel
