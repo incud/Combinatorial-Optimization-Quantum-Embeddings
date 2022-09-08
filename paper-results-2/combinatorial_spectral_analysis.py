@@ -31,6 +31,7 @@ def plot_kernels_eigenvalues_variance(kernels):
     labels_all = []
     f = plt.figure()
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    red_square = dict(markerfacecolor='r', markersize=3, markeredgewidth=0.0)
 
     for d in kernels.keys():
         reskeys = [k for k in kernels[d].keys()]
@@ -101,7 +102,9 @@ def plot_kernels_eigenvalues_variance(kernels):
         v = [res_dataset[k].tolist() for k in res_dataset.keys()]
         plt.boxplot(
             v,
-            l
+            notch=False,
+            whis=3,
+            flierprops=red_square,
         )
         plt.title('Dataset: ' + d, fontsize=15)
         plt.yscale('symlog', linthresh=10**-3)
@@ -183,7 +186,9 @@ def plot_kernels_eigenvalues_variance(kernels):
     v = [res_all[k].tolist() for k in res_all.keys()]
     plt.boxplot(
         v,
-        l
+        notch=False,
+        whis=3,
+        flierprops=red_square
     )
     plt.title('Dataset: all', fontsize=15)
     plt.yscale('symlog', linthresh=10 ** -3)
