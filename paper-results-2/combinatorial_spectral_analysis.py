@@ -103,7 +103,7 @@ def plot_kernels_eigenvalues_variance(kernels):
         plt.boxplot(
             v,
             notch=False,
-            whis=3,
+
             flierprops=red_square,
         )
         plt.title('Dataset: ' + d, fontsize=15)
@@ -187,7 +187,7 @@ def plot_kernels_eigenvalues_variance(kernels):
     plt.boxplot(
         v,
         notch=False,
-        whis=3,
+
         flierprops=red_square
     )
     plt.title('Dataset: all', fontsize=15)
