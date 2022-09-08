@@ -32,39 +32,36 @@ class CombinatorialKernelGreedySearch:
             self.search_gate(gate)
 
     def search_gate(self, gate):
-        best_i, best_j, best_energy = self.state[gate][0], self.state[gate][1], self.energy()
+        best_i, best_j, best_energy = self.solution[gate][0], self.solution[gate][1], self.energy()
         for i in range(16):
             for j in range(self.n_operations):
-                if i != best_i and j != best_j: # avoid repeating initial guess
-                    self.state[gate][0] = i
-                    self.state[gate][1] = j
-                    this_energy = self.energy()
-                    if this_energy < best_energy:
-                        best_energy = this_energy
-                        best_i = i
-                        best_j = j
-
-    def move(self, gate, op):
-        if op == 0:  # update pauli
-            self.state[gate][0] = (self.state[gate][0] + 1) % 16
-        else:  # update operation
-            self.state[gate][1] = (self.state[gate][1] + 1) % self.n_operations
+                self.solution[gate][0] = i
+                self.solution[gate][1] = j
+                this_energy = self.energy()
+                if this_energy < best_energy:
+                    best_energy = this_energy
+                    best_i = i
+                    best_j = j
+        self.solution[gate][0] = best_i
+        self.solution[gate][1] = best_j
+        print(f"\nBest {gate=} {best_i=} {best_j=} | {best_energy}")
+        print(self.solution.ravel(), "\n")
 
     def energy(self, solution=None):
-        solution = self.state if solution is None else solution
+        solution = self.solution if solution is None else solution
         self.energy_calculation_performed += 1
-        print(solution.ravel())
+        # print(solution.ravel())
         # first use "concentration around mean" criteria
         estimated_variance, _ = self.estimate_variance_of_kernel(solution=solution)
-        print(f"Estimated variance: {estimated_variance:0.3f}", end="")
+        # print(f"Estimated variance: {estimated_variance:0.3f}", end="")
         if estimated_variance < 0.1:
             self.energy_calculation_discarded += 1
-            print("")
-            return 100000
+            # print("")
+            return 100000.0
         else:
             # then estimate accuracy
             mse = self.estimate_mse(solution=solution)
-            print(f"\tMSE: {mse:0.3f}")
+            # print(f"\tMSE: {mse:0.3f}")
             return mse
 
     def create_pennylane_function(self):
@@ -118,9 +115,11 @@ class CombinatorialKernelGreedySearch:
                     value = self.combinatorial_kernel(X1[i], X1[j], solution, bandwidth)
                     kernel_gram[i][j] = value
                     kernel_gram[j][i] = value
+                    print(".", end="")
         else:
             kernel_gram = np.zeros(shape=(len(X1), len(X2)))
             for i in range(len(X1)):
                 for j in range(len(X2)):
                     kernel_gram[i][j] = self.combinatorial_kernel(X1[i], X2[j], solution, bandwidth)
+                    print(".", end="")
         return kernel_gram

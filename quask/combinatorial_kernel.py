@@ -17,10 +17,10 @@ def create_operation(n_qubits, n_layers, index, pauli, angle):
     index_within_layer = index % n_layers
     if index_within_layer < n_qubits:  # single qubit operation
         unitary = expm(-1j * angle * pauli_vector[pauli % 4])
-        qml.QubitUnitary(unitary, wires=index_within_layer)
+        qml.QubitUnitary(unitary, wires=index_within_layer % n_qubits)
     else:  # two qubits operation
-        unitary = expm(-1j * angle * np.kron(pauli_vector[pauli % 4], pauli_vector[pauli // 4]))
-        qml.QubitUnitary(unitary, wires=(index_within_layer, (index_within_layer + 1) % n_qubits))
+        unitary = expm(-1j * angle * jnp.kron(pauli_vector[pauli % 4], pauli_vector[pauli // 4]))
+        qml.QubitUnitary(unitary, wires=(index_within_layer % n_qubits, (index_within_layer + 1) % n_qubits))
 
 
 def create_identity_combinatorial_kernel(n_qubits, n_layers):
@@ -39,7 +39,7 @@ def create_random_combinatorial_kernel(n_qubits, n_layers, n_operations):
 def CombinatorialFeatureMap(x, n_qubits, n_layers, solution, bandwidth):
 
     n_gates = n_qubits * 2 * n_layers
-    assert solution.shape == (n_gates, 2), f"Shape is {solution.shape} instead of {(n_gates, 2)}"
+    assert solution.shape == (n_gates, 2), f"Shape is {solution.shape} instead of {(n_gates, 2)} {solution=}"
     for index in range(n_gates):
         pauli = solution[index][0]
         operation_idx = solution[index][1]

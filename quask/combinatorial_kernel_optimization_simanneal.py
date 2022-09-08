@@ -29,7 +29,7 @@ class CombinatorialKernelSimulatedAnnealingTraining(simanneal.Annealer):
 
     def create_pennylane_function(self):
 
-        def combinatorial_kernel_wrapper(x1, x2, solution, bandwidth):
+        def combinatorial_kernel_wrapper(x1, x2, the_solution, bandwidth):
             device = qml.device("default.qubit.jax", wires=self.n_qubits)
 
             # create projector (measures probability of having all "00...0")
@@ -39,8 +39,8 @@ class CombinatorialKernelSimulatedAnnealingTraining(simanneal.Annealer):
             # define the circuit for the quantum kernel ("overlap test" circuit)
             @qml.qnode(device, interface='jax')
             def combinatorial_kernel():
-                CombinatorialFeatureMap(x1, self.n_qubits, self.n_layers, solution, bandwidth)
-                qml.adjoint(CombinatorialFeatureMap)(x2, self.n_qubits, self.n_layers, solution, bandwidth)
+                CombinatorialFeatureMap(x1, self.n_qubits, self.n_layers, the_solution, bandwidth)
+                qml.adjoint(CombinatorialFeatureMap)(x2, self.n_qubits, self.n_layers, the_solution, bandwidth)
                 return qml.expval(qml.Hermitian(projector, wires=range(self.n_qubits)))
 
             return combinatorial_kernel()
@@ -58,7 +58,7 @@ class CombinatorialKernelSimulatedAnnealingTraining(simanneal.Annealer):
 
     def energy(self):
         self.energy_calculation_performed += 1
-        print(self.state.ravel())
+        # print(self.state.ravel())
         # first use "concentration around mean" criteria
         estimated_variance, _ = self.estimate_variance_of_kernel()
         print(f"Estimated variance: {estimated_variance:0.3f}", end="")

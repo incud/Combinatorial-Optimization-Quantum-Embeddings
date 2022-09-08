@@ -251,14 +251,14 @@ def run_simulations(n_layers, epochs, lr, repetitions=10):
                 X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, initial_solution, epochs)
             timing['combinatorial_sa_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
-            # timing['combinatorial_greedy_kernel_start'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-            # print(f"Combinatorial (greedy) kernel starts at {timing['combinatorial_greedy_kernel_start']}")
-            # seed = get_next_seed()
-            # reset_seed(seed)
-            # Path(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_greedy_kernel/{repetition}").mkdir(exist_ok=True)
-            # run_combinatorial_greedy_kernel(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_greedy_kernel/{repetition}",
-            #     X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, initial_solution)
-            # timing['combinatorial_greedy_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            timing['combinatorial_greedy_kernel_start'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            print(f"Combinatorial (greedy) kernel starts at {timing['combinatorial_greedy_kernel_start']}")
+            seed = get_next_seed()
+            reset_seed(seed)
+            Path(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_greedy_kernel/{repetition}").mkdir(exist_ok=True)
+            run_combinatorial_greedy_kernel(f"{INTERMEDIATE_PATH}/{dataset}/combinatorial_greedy_kernel/{repetition}",
+                X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, initial_solution)
+            timing['combinatorial_greedy_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
             json.dump(timing, open(f"{INTERMEDIATE_PATH}/{dataset}/timing.json", "w"))
 

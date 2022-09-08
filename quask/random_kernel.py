@@ -13,8 +13,10 @@ class RandomKernel:
     def __init__(self, X_train, y_train, X_validation, y_validation, n_layers, seed=12345):
         self.X_train = X_train
         self.y_train = y_train
+        self.training_gram = None
         self.X_validation = X_validation
         self.y_validation = y_validation
+        self.validation_gram = None
         self.n_qubits = X_train.shape[1]
         self.n_layers = n_layers
         self.state = jnp.array(np.random.normal(size=((n_layers - 1) * self.n_qubits,)))
@@ -50,10 +52,13 @@ class RandomKernel:
         X_test = self.X_validation if X_test is None else X_test
         y_test = self.y_validation if y_test is None else y_test
         training_gram = self.get_kernel_values(self.X_train, weights=weights)
-        validation_gram = self.get_kernel_values(X_test, self.X_train, weights=weights)
+        testing_gram = self.get_kernel_values(X_test, self.X_train, weights=weights)
+        return self.estimate_mse_svr(training_gram, self.y_train, testing_gram, y_test)
+
+    def estimate_mse_svr(self, gram_train, y_train, gram_test, y_test):
         svr = SVR()
-        svr.fit(training_gram, self.y_train.ravel())
-        y_pred = svr.predict(validation_gram)
+        svr.fit(gram_train, y_train.ravel())
+        y_pred = svr.predict(gram_test)
         return mean_squared_error(y_test.ravel(), y_pred.ravel())
 
     def get_kernel_values(self, X1, X2=None, weights=None, bandwidth=None):

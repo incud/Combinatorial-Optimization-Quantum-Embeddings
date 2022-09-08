@@ -73,7 +73,7 @@ def get_resource(filename):
         import importlib_resources as pkg_resources
 
     from . import resources
-    return pkg_resources.open_text(resources, filename),
+    return pkg_resources.open_text(resources, filename)
 
 
 def get_dataset_quantum(the_id):
@@ -161,7 +161,7 @@ def create_gaussian_mixtures(D, noise, N):
     return X, Y
 
 
-def process_regression_dataset(dataset, n_components, n_elements=None, random_state=42):
+def process_regression_dataset(dataset, n_components, n_elements=None, test_size=0.50, random_state=42):
     """
     Process dataset
     :param dataset: dict with keys 'X', 'y' as np arrays
@@ -181,7 +181,7 @@ def process_regression_dataset(dataset, n_components, n_elements=None, random_st
     X = MinMaxScaler(feature_range=(-1, 1)).fit_transform(X)
     y = y - np.mean(y)
     y = MinMaxScaler(feature_range=(-1, 1)).fit_transform(y)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=random_state)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
     return X_train, X_test, y_train, y_test
 
 
@@ -265,7 +265,7 @@ def load_who_life_expectancy_dataset():
 def load_function_approximation_sin_squared():
     X = np.linspace(-1, 1, 100)
     y = np.sin(2 * X)**2
-    data = {"X": X.reshape((-1, 1)), "y": y.reshape((-1, 1))}
+    data = {"X": np.concatenate([X, X]).reshape((100, 2)), "y": y.reshape((-1, 1))}
     return data
 
 
@@ -274,15 +274,16 @@ def load_function_approximation_step():
     y = np.zeros(shape=(100,))
     y[X > 0] = 1
     y[X < 0] = -1
-    data = {"X": X.reshape((-1, 1)), "y": y.reshape((-1, 1))}
+    X = X.reshape((-1, 1))
+    data = {"X": np.concatenate([X, X]).reshape((100, 2)), "y": y.reshape((-1, 1))}
     return data
 
 
 def load_function_approximation_meyer_wavelet():
     phi, psi, x = pywt.Wavelet('dmey').wavefun(level=5)
     psi_zoom = psi[(x > 25) & (x < 35)]
-    x_zoom = x[(x > 25) & (x < 35)]
-    data = {"X": x_zoom.reshape((-1, 1)), "y": psi_zoom.reshape((-1, 1))}
+    x_zoom = x[(x > 25) & (x < 35)].ravel()
+    data = {"X": np.concatenate([x_zoom, x_zoom]).reshape((len(x_zoom), 2)), "y": psi_zoom.reshape((-1, 1))}
     return data
 
 

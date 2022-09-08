@@ -25,11 +25,12 @@ class TrainableKernel:
         paulis = initial_solution[:, 0].ravel()
         operations = jnp.arange(self.n_gates).ravel()
         self.initial_solution = jnp.stack([paulis, operations]).T
-        print(f"Initial solution shape {self.initial_solution.shape}")
         self.state = jnp.array(np.random.normal(size=(self.n_qubits * self.n_layers,)))
         self.trainable_kernel = self.create_pennylane_function()
         self.history_losses = []
+        self.history_grads = []
         self.history_params = []
+        self.gate_removed = []
 
     # def get_embedding(self, x, weights, bandwidth):
     #     # assert len(weights) == 3 * self.trainable_layers
@@ -47,8 +48,8 @@ class TrainableKernel:
     def overlap_parameters(self, x, weights):
         params = []
         for i in range(self.n_layers):
-            params.append(weights[i * self.n_qubits : (i + 1) * self.n_qubits])
-            params.append(x)
+            params.append(weights[i * self.n_qubits : (i + 1) * self.n_qubits].ravel())
+            params.append(x.ravel())
         return jnp.concatenate(params)
 
     def create_pennylane_function(self):
@@ -95,11 +96,14 @@ class TrainableKernel:
         y_test = self.y_validation if y_test is None else y_test
         training_gram = self.get_kernel_values(self.X_train, weights=weights)
         training_gram = self.jnp_to_np(training_gram)
-        validation_gram = self.get_kernel_values(X_test, self.X_train, weights=weights)
-        validation_gram = self.jnp_to_np(validation_gram)
+        testing_gram = self.get_kernel_values(X_test, self.X_train, weights=weights)
+        testing_gram = self.jnp_to_np(testing_gram)
+        return self.estimate_mse_svr(training_gram, self.y_train, testing_gram, y_test)
+
+    def estimate_mse_svr(self, gram_train, y_train, gram_test, y_test):
         svr = SVR()
-        svr.fit(training_gram, self.y_train.ravel())
-        y_pred = svr.predict(validation_gram)
+        svr.fit(gram_train, y_train.ravel())
+        y_pred = svr.predict(gram_test)
         return mean_squared_error(y_test.ravel(), y_pred.ravel())
 
     def get_kernel_values(self, X1, X2=None, weights=None, bandwidth=None):
@@ -127,11 +131,16 @@ class TrainableKernel:
         opt = optax.adam(learning_rate=lr)
         opt_state = opt.init(self.state)
         for epoch in range(epochs):
-            mse, grad_loss = jax.value_and_grad(self.estimate_mse)(self.state)
-            updates, opt_state = opt.update(grad_loss, opt_state)
-            self.state = optax.apply_updates(self.state, updates)
+            mse, grad_mse = jax.value_and_grad(self.estimate_mse)(self.state)
+            updates, opt_state = opt.update(grad_mse, opt_state)
+            self.state = optax.apply_updates(self.state, updates).reshape((self.n_qubits * self.n_layers,))
             print(".", end="", flush=True)
             self.history_losses.append(mse)
+            self.history_grads.append(grad_mse)
             self.history_params.append(copy.deepcopy(self.state))
-            if jnp.linalg.norm(grad_loss) < 0.0001:
+            if jnp.linalg.norm(grad_mse) < 0.0001:
+                # gate_to_remove = np.random.choice(self.n_gates)
+                # self.gate_removed.append(gate_to_remove)
+                # self.state = self.state.at[gate_to_remove][0].set(0)  # identity gate
+                print(f"{epoch=} Detected barren plateau!")
                 return
