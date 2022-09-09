@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from quask.datasets import *
 from quask.random_kernel import RandomKernel
 from quask.trainable_kernel import TrainableKernel
+from quask.scrambled_kernel import ScrambledKernel
 from quask.combinatorial_kernel import *
 from quask.combinatorial_kernel_optimization_simanneal import CombinatorialKernelSimulatedAnnealingTraining
 from quask.combinatorial_kernel_greedy import CombinatorialKernelGreedySearch
@@ -23,13 +24,22 @@ def reset_seed(seed):
 
 reset_seed(43843933)
 SIMULATION_SEED = np.random.randint(100000, size=(1000,))
+SCRAMBLED_SEED = np.random.randint(100000, size=(1000,))
 simulation_seed_index = 0
+scrambled_seed_index = 0
 
 
 def get_next_seed():
     global SIMULATION_SEED, simulation_seed_index
     ret = SIMULATION_SEED[simulation_seed_index]
     simulation_seed_index += 1
+    return int(ret)
+
+
+def get_next_scrambled_seed():
+    global SCRAMBLED_SEED, scrambled_seed_index
+    ret = SCRAMBLED_SEED[scrambled_seed_index]
+    scrambled_seed_index += 1
     return int(ret)
 
 
@@ -116,6 +126,25 @@ save_datasets(f"{DATASET_PATH}/real_estate", dataset, 5, 150)
 # =====================================================================================
 # 2. GENERATE INTERMEDIATE RESULTS ====================================================
 # =====================================================================================
+
+def run_scrambled_kernel(save_path, X_train, X_validation, X_test, y_train, y_validation, y_test):
+    if Path(f"{save_path}/mse.npy").exists() and not REFRESH_INTERMEDIATE:
+        print(f"{save_path} is non-empty, skipping this scrambled kernel")
+        return
+    sk = ScrambledKernel(X_train, y_train, X_validation, y_validation)
+    gram_train = sk.get_kernel_values(X_train)
+    gram_test = sk.get_kernel_values(X_test, X_train)
+    np.save(f"{save_path}/state.npy", sk.state)
+    np.save(f"{save_path}/gram_train.npy", gram_train)
+    np.save(f"{save_path}/gram_test.npy", gram_test)
+    try:
+        mse = sk.estimate_mse_svr(gram_train, y_train, gram_test, y_test)
+    except:
+        print("Cannot calculate MSE due to faulty gram matrix")
+        mse = np.array(np.inf)
+
+    np.save(f"{save_path}/mse.npy", np.array(mse))
+
 
 def run_random_kernel(save_path, X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, seed):
     if Path(f"{save_path}/mse.npy").exists() and not REFRESH_INTERMEDIATE:
@@ -225,6 +254,15 @@ def run_simulations(n_layers, epochs, lr, repetitions=10):
             print(f"========================= {dataset} {repetition} ========================= ")
             timing = {}
 
+            timing['scrambled_kernel_start'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            print(f"Random kernel starts at {timing['scrambled_kernel_start']}")
+            seed = get_next_scrambled_seed()
+            reset_seed(seed)
+            Path(f"{INTERMEDIATE_PATH}/{dataset}/scrambled_kernel/{repetition}").mkdir(exist_ok=True)
+            run_scrambled_kernel(f"{INTERMEDIATE_PATH}/{dataset}/scrambled_kernel/{repetition}", X_train, X_validation,
+                              X_test, y_train, y_validation, y_test)
+            timing['scrambled_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+
             timing['random_kernel_start'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
             print(f"Random kernel starts at {timing['random_kernel_start']}")
             seed = get_next_seed()
@@ -276,7 +314,7 @@ def generate_plots(intermediate_path, plot_path, repetitions, allow_partial_fold
     DATASETS = ["fish_market", "life_expectancy", "medical_bill", "ols_cancer", "real_estate",
                 "function_approximation_meyer_wavelet", "function_approximation_sin_squared",
                 "function_approximation_step"]
-    TECHNIQUES = ['random_kernel', 'combinatorial_sa_kernel']
+    TECHNIQUES = ['random_kernel', 'combinatorial_sa_kernel', 'combinatorial_greedy_kernel']
 
     for dataset in DATASETS:
         mse_dataset = {technique: [] for technique in TECHNIQUES}
