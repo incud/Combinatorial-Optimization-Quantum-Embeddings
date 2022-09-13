@@ -2,6 +2,7 @@ import pennylane as qml
 import numpy as np
 import jax.numpy as jnp
 from jax.scipy.linalg import expm
+import jax
 
 
 sigma_x = np.array([[0, 1], [1, 0]])
@@ -45,3 +46,25 @@ def CombinatorialFeatureMap(x, n_qubits, n_layers, solution, bandwidth):
         operation_idx = solution[index][1]
         angle = bandwidth * x[operation_idx]
         create_operation(n_qubits, n_layers, index, pauli, angle)
+
+
+def CombinatorialKernel(n_qubits, n_layers):
+
+    def combinatorial_kernel_wrapper(x1, x2, the_solution, the_bandwidth):
+        device = qml.device("default.qubit.jax", wires=n_qubits)
+        the_solution = the_solution.reshape((2*n_qubits*n_layers, 2))
+
+        # create projector (measures probability of having all "00...0")
+        projector = np.zeros((2 ** n_qubits, 2 ** n_qubits))
+        projector[0, 0] = 1
+
+        # define the circuit for the quantum kernel ("overlap test" circuit)
+        @qml.qnode(device, interface='jax')
+        def combinatorial_kernel():
+            CombinatorialFeatureMap(x1, n_qubits, n_layers, the_solution, the_bandwidth)
+            qml.adjoint(CombinatorialFeatureMap)(x2, n_qubits, n_layers, the_solution, the_bandwidth)
+            return qml.expval(qml.Hermitian(projector, wires=range(n_qubits)))
+
+        return combinatorial_kernel()
+
+    return jax.jit(combinatorial_kernel_wrapper)
