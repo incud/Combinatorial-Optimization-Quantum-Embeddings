@@ -252,6 +252,42 @@ def run_combinatorial_genetic_kernel(save_path, X_train, X_validation, X_test, y
     np.save(f"{save_path}/mse.npy", np.array(mse))
 
 
+def run_combinatorial_initialization_kernels(dataset_path, repetition, X_train, X_validation, X_test, y_train, y_validation, y_test, n_layers, ck):
+
+    TECHNIQUES = ['combinatorial_genetic_kernel', 'combinatorial_sa_kernel', 'combinatorial_greedy_kernel']
+    for technique in TECHNIQUES:
+
+        optimized_folder = Path(f"{dataset_path}/{technique}/{repetition}")
+        initialization_folder = Path(f"{dataset_path}/init_{technique}/{repetition}")
+
+        if not optimized_folder.exists():
+            print(f"Skipping {dataset_path=} {technique=} {repetition=}")
+            continue
+
+        Path(f"{dataset_path}/init_{technique}").mkdir(exist_ok=True)
+        initialization_folder.mkdir(exist_ok=True)
+
+        # start with initial solution and see the gram matrices and mse
+
+    # X_train, y_train, X_validation, y_validation, ck, n_qubits, n_layers
+    n_qubits = X_train.shape[1]
+    ck = CombinatorialKernelGenetic(X_train, y_train, X_validation, y_validation, ck, n_qubits, n_layers)
+    ck.generate_initial_population()
+    np.save(f"{save_path}/initial_items.npy", np.array([item[0] for item in ck.initial_population]))
+    np.save(f"{save_path}/initial_cost.npy", np.array([item[1] for item in ck.initial_population]))
+    ck.run_genetic_optimization()
+    np.save(f"{save_path}/final_items.npy", np.array([item[0] for item in ck.current_population]))
+    np.save(f"{save_path}/final_cost.npy", np.array([item[1] for item in ck.current_population]))
+    gram_train = ck.get_kernel_values(X_train)
+    gram_test = ck.get_kernel_values(X_test, X_train)
+    mse = ck.estimate_mse(X_test=X_test, y_test=y_test)
+    np.save(f"{save_path}/gram_train.npy", gram_train)
+    np.save(f"{save_path}/gram_test.npy", gram_test)
+    np.save(f"{save_path}/energy_calculation_performed.npy", np.array(ck.energy_calculation_performed))
+    np.save(f"{save_path}/energy_calculation_discarded.npy", np.array(ck.energy_calculation_discarded))
+    np.save(f"{save_path}/mse.npy", np.array(mse))
+
+
 def run_simulations(n_layers, epochs, lr, repetitions=10):
     global SCRAMBLED_3_SEED, SCRAMBLED_4_SEED, GENETIC_SEED, scrambled_4_seed_index, scrambled_3_seed_index, genetic_seed_index
 
@@ -343,16 +379,32 @@ def run_simulations(n_layers, epochs, lr, repetitions=10):
                                             n_layers, ck)
             timing['combinatorial_genetic_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
-            # TODO ADD INIT OF THE TRAINING
+            # DIFFERENCE OF COMBINATORIAL KERNELS BEFORE AND AFTER THE INITIALIZATION
+            run_combinatorial_initialization_kernels(f"{INTERMEDIATE_PATH}/{dataset}", repetition,
+                                                     X_train, X_validation, X_test, y_train, y_validation, y_test,
+                                                     n_layers, ck)
 
             json.dump(timing, open(f"{INTERMEDIATE_PATH}/{dataset}/timing.json", "w"))
 
 
-# run_simulations(3, 1000, 0.01, 10)
+run_simulations(3, 1000, 0.01, 10)
 
 
 # =====================================================================================
 # 3. GENERATE PLOTS ===================================================================
+# =====================================================================================
+
+
+def create_increment_performances_plot():
+    import pandas as pd
+    import seaborn as sns
+    mse_data = pd.DataFrame(columns=['mse', 'dataset', 'technique'])
+    sns.displot(mse_data, x="technique", hue="dataset", multiple="dodge")
+    plt.savefig()
+
+
+# =====================================================================================
+# 4. GENERATE DETAILED PLOTS ==========================================================
 # =====================================================================================
 
 
@@ -383,18 +435,23 @@ def plot_eigvals(the_plot_path, the_eigvals_data, dataset_name, title=None, ylim
         return
 
     # plot graph
-    plt.figure()
-    for i in range(len(eigvals_items[0][1])):
-        plt.violinplot([v[i] for k, v in eigvals_items], range(len(eigvals_items)),
-            widths=0.3, showmeans=True, showextrema=True, showmedians=True)
-    if ylim is not None:
-        plt.ylim(ylim)
-    plt.ylabel("Eigenvalue")
-    plt.xticks(range(len(eigvals_items)), [k for k, v in eigvals_items], rotation=45)
-    plt.subplots_adjust(bottom=0.25)
-    plt.title(f"Eigenvalue distribution for for {dataset_name=}" if title is None else title)
-    plt.savefig(f"{the_plot_path}/{dataset_name}.png")
-    plt.close()
+    try:
+        plt.figure()
+        for i in range(len(eigvals_items[0][1])):
+            violins = [v[i] for k, v in eigvals_items]
+            # print(f"{len(eigvals_items[0][1])=} {len(eigvals_items)=} {len(violins)=}")
+            plt.violinplot(violins, range(len(eigvals_items)),
+                           widths=0.3, showmeans=True, showextrema=True, showmedians=True)
+        if ylim is not None:
+            plt.ylim(ylim)
+        plt.ylabel("Eigenvalue")
+        plt.xticks(range(len(eigvals_items)), [k for k, v in eigvals_items], rotation=45)
+        plt.subplots_adjust(bottom=0.25)
+        plt.title(f"Eigenvalue distribution for for {dataset_name=}" if title is None else title)
+        plt.savefig(f"{the_plot_path}/{dataset_name}.png")
+        plt.close()
+    except:
+        print("ERROR! THE SIMULATION HAS BEEN STOPPED MIDWAY")
 
 
 def plot_coefficients(the_plot_path, the_coeffs_data, dataset_name, title=None):
@@ -404,22 +461,25 @@ def plot_coefficients(the_plot_path, the_coeffs_data, dataset_name, title=None):
         print(f"Warning: {dataset_name=} has not be processed at all")
         return
 
-    # plot graph
-    plt.figure()
-    for i in range(len(coeffs_items[0][1])):
-        parts = plt.violinplot([v[i] for k, v in coeffs_items], range(len(coeffs_items)),
-            widths=0.3, showmeans=True, showextrema=True, showmedians=True)
-        for j in range(len(parts['bodies'])):
-            parts['bodies'][j].set_facecolor("None")  # "None" = transparent
-            parts['bodies'][j].set_edgecolor('#000000')
-            parts['bodies'][j].set_linewidth(0.75)
-            parts['bodies'][j].set_alpha(0.50)
-    plt.ylabel("Coefficient value")
-    plt.xticks(range(len(coeffs_items)), [k for k, v in coeffs_items], rotation=45)
-    plt.subplots_adjust(bottom=0.25)
-    plt.title(f"Coefficient distributions for {dataset_name=}" if title is None else title)
-    plt.savefig(f"{the_plot_path}/{dataset_name}.png")
-    plt.close()
+    try:
+        # plot graph
+        plt.figure()
+        for i in range(len(coeffs_items[0][1])):
+            parts = plt.violinplot([v[i] for k, v in coeffs_items], range(len(coeffs_items)),
+                widths=0.3, showmeans=True, showextrema=True, showmedians=True)
+            for j in range(len(parts['bodies'])):
+                parts['bodies'][j].set_facecolor("None")  # "None" = transparent
+                parts['bodies'][j].set_edgecolor('#000000')
+                parts['bodies'][j].set_linewidth(0.75)
+                parts['bodies'][j].set_alpha(0.50)
+        plt.ylabel("Coefficient value")
+        plt.xticks(range(len(coeffs_items)), [k for k, v in coeffs_items], rotation=45)
+        plt.subplots_adjust(bottom=0.25)
+        plt.title(f"Coefficient distributions for {dataset_name=}" if title is None else title)
+        plt.savefig(f"{the_plot_path}/{dataset_name}.png")
+        plt.close()
+    except:
+        print("ERROR! THE SIMULATION HAS BEEN STOPPED MIDWAY")
 
 
 def plot_mse_variance(the_plot_path, the_mse_data, the_coeffs_data, dataset_name, title=None):
@@ -536,11 +596,13 @@ def generate_plots(intermediate_path, plot_path, repetitions, allow_partial_fold
             mse_data[technique] = np.array(mse_data[technique])
             mse_data[technique][mse_data[technique] == np.inf] = 2*n
 
-        # plot_mse(f"{plot_path}/mse", mse_data, dataset_name=dataset, title=f"MSE {dataset}")
-        # plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=dataset, title=f"EIGVALS {dataset}")
-        # plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=f"{dataset}_zoom", title=f"EIGVALS {dataset}", ylim=(5, 25))
-        # plot_coefficients(f"{plot_path}/variance", coeffs_data, dataset_name=dataset, title=f"VARIANCE {dataset}")
-        # plot_mse_variance(f"{plot_path}/mse-variance", mse_data, coeffs_data, dataset_name=dataset)
+        plot_mse(f"{plot_path}/mse", mse_data, dataset_name=dataset, title=f"MSE {dataset}")
+        plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=dataset, title=f"EIGVALS {dataset}")
+        plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=f"{dataset}_zoom", title=f"EIGVALS {dataset}", ylim=(5, 25))
+        plot_coefficients(f"{plot_path}/variance", coeffs_data, dataset_name=dataset, title=f"VARIANCE {dataset}")
+        plot_mse_variance(f"{plot_path}/mse-variance", mse_data, coeffs_data, dataset_name=dataset)
         plot_mse_eigvals(f"{plot_path}/mse-eigenvalue", mse_data, eigvals_data, dataset_name=dataset)
 
+
 # generate_plots(INTERMEDIATE_PATH, PLOT_PATH, repetitions=10)
+
