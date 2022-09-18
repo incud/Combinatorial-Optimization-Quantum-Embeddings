@@ -3,6 +3,9 @@ import json
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.svm import SVR
+from sklearn.metrics import mean_squared_error
+
 from quask.datasets import *
 from quask.random_kernel import RandomKernel
 from quask.trainable_kernel import TrainableKernel
@@ -48,6 +51,36 @@ PLOT_PATH = "paper-results-2/plots"
 np.save(f"{INTERMEDIATE_PATH}/SIMULATION_SEED.npy", SIMULATION_SEED)
 REFRESH_DATASET = False
 REFRESH_INTERMEDIATE = False
+
+def get_kernel_values(ck, solution, X1, X2=None, bandwidth=1.0):
+    if X2 is None:
+        m = X1.shape[0]
+        kernel_gram = np.eye(m)
+        for i in range(m):
+            for j in range(i + 1, m):
+                value = ck(X1[i], X1[j], solution, bandwidth)
+                kernel_gram[i][j] = value
+                kernel_gram[j][i] = value
+                print(".", end="")
+    else:
+        kernel_gram = np.zeros(shape=(len(X1), len(X2)))
+        for i in range(len(X1)):
+            for j in range(len(X2)):
+                kernel_gram[i][j] = ck(X1[i], X2[j], solution, bandwidth)
+                print(".", end="")
+    return kernel_gram
+
+
+def estimate_mse(ck, solution, X_train, X_test, y_train, y_test, save_path=None):
+    training_gram = get_kernel_values(ck, solution, X_train)
+    testing_gram = get_kernel_values(ck, solution, X_test, X_train)
+    if save_path:
+        np.save(f"{save_path}/training_gram.npy", training_gram)
+        np.save(f"{save_path}/testing_gram.npy", testing_gram)
+    svr = SVR()
+    svr.fit(training_gram, y_train.ravel())
+    y_pred = svr.predict(testing_gram)
+    return mean_squared_error(y_test.ravel(), y_pred.ravel())
 
 # =====================================================================================
 # 1. GENERATE DATASETS ================================================================
@@ -258,34 +291,39 @@ def run_combinatorial_initialization_kernels(dataset_path, repetition, X_train, 
     for technique in TECHNIQUES:
 
         optimized_folder = Path(f"{dataset_path}/{technique}/{repetition}")
+        initialization_parent_folder = Path(f"{dataset_path}/init_{technique}")
         initialization_folder = Path(f"{dataset_path}/init_{technique}/{repetition}")
 
         if not optimized_folder.exists():
             print(f"Skipping {dataset_path=} {technique=} {repetition=}")
             continue
 
-        Path(f"{dataset_path}/init_{technique}").mkdir(exist_ok=True)
+        initialization_parent_folder.mkdir(exist_ok=True)
         initialization_folder.mkdir(exist_ok=True)
 
         # start with initial solution and see the gram matrices and mse
+        if Path(f"{dataset_path}/{technique}/{repetition}/initial_solution.npy").exists():
 
-    # X_train, y_train, X_validation, y_validation, ck, n_qubits, n_layers
-    n_qubits = X_train.shape[1]
-    ck = CombinatorialKernelGenetic(X_train, y_train, X_validation, y_validation, ck, n_qubits, n_layers)
-    ck.generate_initial_population()
-    np.save(f"{save_path}/initial_items.npy", np.array([item[0] for item in ck.initial_population]))
-    np.save(f"{save_path}/initial_cost.npy", np.array([item[1] for item in ck.initial_population]))
-    ck.run_genetic_optimization()
-    np.save(f"{save_path}/final_items.npy", np.array([item[0] for item in ck.current_population]))
-    np.save(f"{save_path}/final_cost.npy", np.array([item[1] for item in ck.current_population]))
-    gram_train = ck.get_kernel_values(X_train)
-    gram_test = ck.get_kernel_values(X_test, X_train)
-    mse = ck.estimate_mse(X_test=X_test, y_test=y_test)
-    np.save(f"{save_path}/gram_train.npy", gram_train)
-    np.save(f"{save_path}/gram_test.npy", gram_test)
-    np.save(f"{save_path}/energy_calculation_performed.npy", np.array(ck.energy_calculation_performed))
-    np.save(f"{save_path}/energy_calculation_discarded.npy", np.array(ck.energy_calculation_discarded))
-    np.save(f"{save_path}/mse.npy", np.array(mse))
+            # create kernel using initialization solution
+            initial_solution = np.load(f"{optimized_folder.name}/initial_solution.npy")
+            np.save(f"{initialization_folder}/initial_solution.npy", initial_solution)
+            mse = estimate_mse(ck, initial_solution, X_train, X_test, y_train, y_test, initialization_folder.name)
+            np.save(f"{initialization_folder}/mse.npy", np.array(mse))
+
+        elif Path(f"{dataset_path}/{technique}/{repetition}/initial_items.npy").exists():
+
+            initial_items = np.load(f"{optimized_folder.name}/initial_items.npy")
+            np.save(f"{initialization_folder}/initial_items.npy", initial_items)
+
+            mse_list = []
+            for initial_solution in initial_items:
+                mse = estimate_mse(ck, initial_solution, X_train, X_test, y_train, y_test, initialization_folder.name)
+                mse_list.append(mse)
+
+            np.save(f"{initialization_folder}/mse.npy", np.array(mse_list))
+
+        else:
+            raise ValueError("Missing initialization info")
 
 
 def run_simulations(n_layers, epochs, lr, repetitions=10):
@@ -380,9 +418,9 @@ def run_simulations(n_layers, epochs, lr, repetitions=10):
             timing['combinatorial_genetic_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
             # DIFFERENCE OF COMBINATORIAL KERNELS BEFORE AND AFTER THE INITIALIZATION
-            run_combinatorial_initialization_kernels(f"{INTERMEDIATE_PATH}/{dataset}", repetition,
-                                                     X_train, X_validation, X_test, y_train, y_validation, y_test,
-                                                     n_layers, ck)
+            # run_combinatorial_initialization_kernels(f"{INTERMEDIATE_PATH}/{dataset}", repetition,
+            #                                          X_train, X_validation, X_test, y_train, y_validation, y_test,
+            #                                          n_layers, ck)
 
             json.dump(timing, open(f"{INTERMEDIATE_PATH}/{dataset}/timing.json", "w"))
 
