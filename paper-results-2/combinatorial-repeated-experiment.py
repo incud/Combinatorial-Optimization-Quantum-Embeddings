@@ -1,10 +1,13 @@
 import datetime
 import json
+import pathlib
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.svm import SVR
 from sklearn.metrics import mean_squared_error
+import pandas as pd
+import seaborn as sns
 
 from quask.datasets import *
 from quask.random_kernel import RandomKernel
@@ -71,16 +74,28 @@ def get_kernel_values(ck, solution, X1, X2=None, bandwidth=1.0):
     return kernel_gram
 
 
+def estimate_mse_from_gram(gram_train, gram_test, y_train, y_test):
+    svr = SVR()
+    svr.fit(gram_train, y_train.ravel())
+    y_pred = svr.predict(gram_test)
+    return mean_squared_error(y_test.ravel(), y_pred.ravel())
+
+
 def estimate_mse(ck, solution, X_train, X_test, y_train, y_test, save_path=None):
     training_gram = get_kernel_values(ck, solution, X_train)
     testing_gram = get_kernel_values(ck, solution, X_test, X_train)
     if save_path:
-        np.save(f"{save_path}/training_gram.npy", training_gram)
-        np.save(f"{save_path}/testing_gram.npy", testing_gram)
-    svr = SVR()
-    svr.fit(training_gram, y_train.ravel())
-    y_pred = svr.predict(testing_gram)
-    return mean_squared_error(y_test.ravel(), y_pred.ravel())
+        if issubclass(type(save_path), pathlib.Path):
+            np.save(save_path / "training_gram.npy", training_gram)
+            np.save(save_path / "testing_gram.npy", testing_gram)
+        else:
+            np.save(f"{save_path}/training_gram.npy", training_gram)
+            np.save(f"{save_path}/testing_gram.npy", testing_gram)
+    try:
+        return estimate_mse_from_gram(training_gram, testing_gram, y_train, y_test)
+    except:
+        training_gram = training_gram + np.eye(training_gram.shape[0])
+        return estimate_mse_from_gram(training_gram, testing_gram, y_train, y_test)
 
 # =====================================================================================
 # 1. GENERATE DATASETS ================================================================
@@ -292,49 +307,55 @@ def run_combinatorial_initialization_kernels(dataset_path, repetition, X_train, 
 
         optimized_folder = Path(f"{dataset_path}/{technique}/{repetition}")
         initialization_parent_folder = Path(f"{dataset_path}/init_{technique}")
-        initialization_folder = Path(f"{dataset_path}/init_{technique}/{repetition}")
+        initialization_folder = initialization_parent_folder / str(repetition)
 
         if not optimized_folder.exists():
-            print(f"Skipping {dataset_path=} {technique=} {repetition=}")
+            print(f"Skipping {dataset_path=} {technique=} {repetition=} (MISSING OPTIMIZED PART)")
+            continue
+
+        if (initialization_folder / "mse.npy").exists():
+            print(f"Skipping {dataset_path=} {technique=} {repetition=} (ALREADY EXISTS)")
             continue
 
         initialization_parent_folder.mkdir(exist_ok=True)
         initialization_folder.mkdir(exist_ok=True)
 
         # start with initial solution and see the gram matrices and mse
-        if Path(f"{dataset_path}/{technique}/{repetition}/initial_solution.npy").exists():
+        if (optimized_folder / "initial_solution.npy").exists():
 
             # create kernel using initialization solution
-            initial_solution = np.load(f"{optimized_folder.name}/initial_solution.npy")
-            np.save(f"{initialization_folder}/initial_solution.npy", initial_solution)
-            mse = estimate_mse(ck, initial_solution, X_train, X_test, y_train, y_test, initialization_folder.name)
-            np.save(f"{initialization_folder}/mse.npy", np.array(mse))
+            initial_solution = np.load(optimized_folder / "initial_solution.npy")
+            np.save(initialization_folder / "initial_solution.npy", initial_solution)
+            mse = estimate_mse(ck, initial_solution, X_train, X_test, y_train, y_test, initialization_folder)
+            np.save(initialization_folder / "mse.npy", np.array(mse))
 
-        elif Path(f"{dataset_path}/{technique}/{repetition}/initial_items.npy").exists():
+        elif (optimized_folder / "initial_items.npy").exists():
 
-            initial_items = np.load(f"{optimized_folder.name}/initial_items.npy")
-            np.save(f"{initialization_folder}/initial_items.npy", initial_items)
+            initial_items = np.load(optimized_folder / "initial_items.npy")
+            np.save(initialization_folder / "initial_items.npy", initial_items)
 
             mse_list = []
             for initial_solution in initial_items:
-                mse = estimate_mse(ck, initial_solution, X_train, X_test, y_train, y_test, initialization_folder.name)
+                mse = estimate_mse(ck, initial_solution, X_train, X_test, y_train, y_test, initialization_folder)
                 mse_list.append(mse)
 
-            np.save(f"{initialization_folder}/mse.npy", np.array(mse_list))
+            np.save(initialization_folder / "mse.npy", np.array(mse_list))
 
         else:
             raise ValueError("Missing initialization info")
 
+the_n_layers = 3
+combinatorial_kernel_2 = CombinatorialKernel(2, the_n_layers)
+combinatorial_kernel_5 = CombinatorialKernel(5, the_n_layers)
 
 def run_simulations(n_layers, epochs, lr, repetitions=10):
+
     global SCRAMBLED_3_SEED, SCRAMBLED_4_SEED, GENETIC_SEED, scrambled_4_seed_index, scrambled_3_seed_index, genetic_seed_index
+    global combinatorial_kernel_2, combinatorial_kernel_5
 
     DATASETS = ["fish_market", "function_approximation_meyer_wavelet", "function_approximation_sin_squared",
                 "function_approximation_step", "life_expectancy",
                 "medical_bill", "ols_cancer", "real_estate"]
-
-    combinatorial_kernel_2 = CombinatorialKernel(2, n_layers)
-    combinatorial_kernel_5 = CombinatorialKernel(5, n_layers)
 
     for dataset in DATASETS:
 
@@ -418,28 +439,326 @@ def run_simulations(n_layers, epochs, lr, repetitions=10):
             timing['combinatorial_genetic_kernel_end'] = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
             # DIFFERENCE OF COMBINATORIAL KERNELS BEFORE AND AFTER THE INITIALIZATION
-            # run_combinatorial_initialization_kernels(f"{INTERMEDIATE_PATH}/{dataset}", repetition,
-            #                                          X_train, X_validation, X_test, y_train, y_validation, y_test,
-            #                                          n_layers, ck)
+            run_combinatorial_initialization_kernels(f"{INTERMEDIATE_PATH}/{dataset}", repetition,
+                                                     X_train, X_validation, X_test, y_train, y_validation, y_test,
+                                                     n_layers, ck)
 
             json.dump(timing, open(f"{INTERMEDIATE_PATH}/{dataset}/timing.json", "w"))
 
 
-run_simulations(3, 1000, 0.01, 10)
+# run_simulations(the_n_layers, 1000, 0.01, 10)
 
 
 # =====================================================================================
 # 3. GENERATE PLOTS ===================================================================
 # =====================================================================================
 
+def load_mse_data(reps):
 
-def create_increment_performances_plot():
-    import pandas as pd
-    import seaborn as sns
-    mse_data = pd.DataFrame(columns=['mse', 'dataset', 'technique'])
-    sns.displot(mse_data, x="technique", hue="dataset", multiple="dodge")
-    plt.savefig()
+    mse_data = pd.DataFrame(columns=['mse_change', 'mse_pre', 'mse_post', 'dataset', 'technique',
+                                     'pre_gram', 'post_gram', 'pre_gram_test', 'post_gram_test'])
 
+    DATASETS = ["fish_market", "function_approximation_meyer_wavelet", "function_approximation_sin_squared",
+                "function_approximation_step", "life_expectancy",
+                "medical_bill", "ols_cancer", "real_estate"]
+
+    TECHNIQUES = ['combinatorial_genetic_kernel', 'combinatorial_sa_kernel', 'combinatorial_greedy_kernel']
+
+    for dataset in DATASETS:
+        for technique in TECHNIQUES:
+            print(f"\n{dataset=} {technique=}")
+            if technique.startswith("combinatorial_genetic"):
+                for i in range(reps):
+                    pre_opt_mse = np.load(f"{INTERMEDIATE_PATH}/{dataset}/init_{technique}/{i}/mse.npy")
+                    pre_opt_mse = np.min(pre_opt_mse).item()
+                    post_opt_mse = np.load(f"{INTERMEDIATE_PATH}/{dataset}/{technique}/{i}/mse.npy")
+                    relative_change = (pre_opt_mse - post_opt_mse) / np.abs(pre_opt_mse)
+                    print(f"Before optimization {pre_opt_mse}, after optimization {post_opt_mse}, {relative_change=}")
+                    pre_gram = np.load(f"{INTERMEDIATE_PATH}/{dataset}/init_{technique}/{i}/training_gram.npy")
+                    post_gram = np.load(f"{INTERMEDIATE_PATH}/{dataset}/{technique}/{i}/gram_train.npy")
+                    pre_gram_test = np.load(f"{INTERMEDIATE_PATH}/{dataset}/init_{technique}/{i}/testing_gram.npy")
+                    post_gram_test = np.load(f"{INTERMEDIATE_PATH}/{dataset}/{technique}/{i}/gram_test.npy")
+                    mse_data.loc[len(mse_data)] = {'mse_change': relative_change,
+                                                   'mse_pre': pre_opt_mse,
+                                                   'mse_post': post_opt_mse,
+                                                   'dataset': dataset,
+                                                   'technique': technique,
+                                                   'pre_gram': pre_gram,
+                                                   'post_gram': post_gram,
+                                                   'pre_gram_test': pre_gram_test,
+                                                   'post_gram_test': post_gram_test}
+            else:
+                for i in range(reps):
+                    pre_opt_mse = np.load(f"{INTERMEDIATE_PATH}/{dataset}/init_{technique}/{i}/mse.npy")
+                    post_opt_mse = np.load(f"{INTERMEDIATE_PATH}/{dataset}/{technique}/{i}/mse.npy")
+                    relative_change = (pre_opt_mse - post_opt_mse) / np.abs(pre_opt_mse)
+                    print(f"Before optimization {pre_opt_mse}, after optimization {post_opt_mse}, {relative_change=}")
+                    pre_gram = np.load(f"{INTERMEDIATE_PATH}/{dataset}/init_{technique}/{i}/training_gram.npy")
+                    post_gram = np.load(f"{INTERMEDIATE_PATH}/{dataset}/{technique}/{i}/gram_train.npy")
+                    pre_gram_test = np.load(f"{INTERMEDIATE_PATH}/{dataset}/init_{technique}/{i}/testing_gram.npy")
+                    post_gram_test = np.load(f"{INTERMEDIATE_PATH}/{dataset}/{technique}/{i}/gram_test.npy")
+                    mse_data.loc[len(mse_data)] = {'mse_change': relative_change,
+                                                   'mse_pre': pre_opt_mse,
+                                                   'mse_post': post_opt_mse,
+                                                   'dataset': dataset,
+                                                   'technique': technique,
+                                                   'pre_gram': pre_gram,
+                                                   'post_gram': post_gram,
+                                                   'pre_gram_test': pre_gram_test,
+                                                   'post_gram_test': post_gram_test}
+
+    mse_data['dataset'] = mse_data['dataset'].replace(
+        {
+            "fish_market": 'FM',
+            "function_approximation_meyer_wavelet": 'XM',
+            "function_approximation_sin_squared": 'XS',
+            "function_approximation_step": 'XT',
+            "life_expectancy": 'LE',
+            "medical_bill": 'MB',
+            "ols_cancer": 'OC',
+            "real_estate": 'RE'
+        }
+    )
+    mse_data['technique'] = mse_data['technique'].replace(
+        {
+            'combinatorial_genetic_kernel': 'Genetic',
+            'combinatorial_sa_kernel': 'Sim. Annealing',
+            'combinatorial_greedy_kernel': 'Greedy'
+        }
+    )
+    return mse_data
+
+
+def create_increment_performances_plot(mse_data):
+
+    order = ['XS', 'XT', 'XM', 'OC', 'RE', 'FM', 'MB', 'LE']
+    hue_order = ['Genetic', 'Greedy', 'Sim. Annealing']
+    # baseline
+    plt.hlines(0.0, colors='red', xmin=-0.5, xmax=7.5, zorder=-1)
+    # plot distributions of solutions
+    sns.stripplot(x="dataset", y="mse_change", hue="technique", data=mse_data, dodge=True, alpha=.25, zorder=1, order=order, hue_order=hue_order)
+    # plot maximum
+    max_data = mse_data.drop(columns=['pre_gram', 'post_gram', 'pre_gram_test', 'post_gram_test'], axis=1, inplace=False)
+    max_data = max_data.groupby(['dataset', 'technique']).max()
+    print(max_data)
+    max_data = max_data.reset_index()
+    ax = sns.pointplot(x="dataset", y="mse_change", hue="technique", data=max_data, join=False, dodge=0.8 - 0.8/3, order=order, hue_order=hue_order)
+    handles, labels = ax.get_legend_handles_labels()
+    plt.ylabel('$\\frac{mse\\,init - mse\\,opt}{mse\\,init}$ (higher is better)')
+    plt.legend(handles[0:3], labels[0:3], loc='lower right', borderaxespad=0.2)
+    plt.ylim((-0.5, 0.75))
+    plt.xlim((-0.5, 7.5))
+    plt.tight_layout()
+    plt.savefig(f"{PLOT_PATH}/sns-mse/mse_change.png")
+    plt.close('all')
+
+
+def create_eigenvalue_single_comparison(mse_data, dataset, technique, reps):
+    sub_mse_data = mse_data[(mse_data['dataset'] == dataset) & (mse_data['technique'] == technique)]
+    the_eigvals_data = pd.DataFrame(columns=['ith', 'value', 'type'])
+    for rep in range(reps):
+        row = sub_mse_data.iloc[rep]
+        pre_eigvals = np.sort(np.linalg.eigvals(row['pre_gram']).real)[::-1]
+        post_eigvals = np.sort(np.linalg.eigvals(row['post_gram']).real)[::-1]
+        for i in range(10):
+            the_eigvals_data.loc[len(the_eigvals_data)] = {'ith': i, 'value': pre_eigvals[i], 'type': 'pre'}
+            the_eigvals_data.loc[len(the_eigvals_data)] = {'ith': i, 'value': post_eigvals[i], 'type': 'post'}
+    sns.lineplot(data=the_eigvals_data, x='ith', y='value', hue='type')
+
+
+def create_eigenvalue_technique_comparison(mse_data, dataset, reps):
+    sub_mse_data = mse_data[(mse_data['dataset'] == dataset)]
+    the_eigvals_data = pd.DataFrame(columns=['ith', 'value', 'type', 'technique'])
+    for technique in ['Genetic', 'Greedy', 'Sim. Annealing']:
+        for rep in range(reps):
+            row = sub_mse_data[sub_mse_data['technique'] == technique].iloc[rep]
+            pre_eigvals = np.sort(np.linalg.eigvals(row['pre_gram']).real)[::-1]
+            post_eigvals = np.sort(np.linalg.eigvals(row['post_gram']).real)[::-1]
+            for i in range(10):
+                the_eigvals_data.loc[len(the_eigvals_data)] = {'ith': i, 'technique': technique, 'value': pre_eigvals[i], 'type': 'pre'}
+                the_eigvals_data.loc[len(the_eigvals_data)] = {'ith': i, 'technique': technique, 'value': post_eigvals[i], 'type': 'post'}
+    sns.lineplot(data=the_eigvals_data, x='ith', y='value', style='technique', hue='type')
+
+
+def create_eigenvalue_change_plot(mse_data, reps):
+    for dataset in ['XS', 'XT', 'XM', 'OC', 'RE', 'FM', 'MB']:
+        create_eigenvalue_technique_comparison(mse_data, 'XM', reps)
+        plt.tight_layout()
+        plt.savefig(f"{PLOT_PATH}/sns-mse/eigvals_{dataset}.png")
+        plt.close('all')
+
+
+def create_variance_single_change_plot(mse_data, dataset, technique, reps):
+    sub_mse_data = mse_data[(mse_data['dataset'] == dataset) & (mse_data['technique'] == technique)]
+    the_variance_data = pd.DataFrame(columns=['mse', 'variance', 'type'])
+    for rep in range(reps):
+        row = sub_mse_data.iloc[rep]
+        gram_pre = row['pre_gram']
+        gram_post = row['post_gram']
+        var_pre = np.var(gram_pre[np.triu_indices(gram_pre.shape[0], k=1)]).item()
+        var_post = np.var(gram_post[np.triu_indices(gram_post.shape[0], k=1)]).item()
+        for i in range(10):
+            the_variance_data.loc[len(the_variance_data)] = {'mse': row['mse_pre'], 'variance': var_pre, 'type': 'pre'}
+            the_variance_data.loc[len(the_variance_data)] = {'mse': row['mse_post'], 'variance': var_post, 'type': 'post'}
+    the_variance_data['type'] = the_variance_data['type'].astype('category')
+    the_variance_data['mse'] = the_variance_data['mse'].astype(float)
+    the_variance_data['variance'] = the_variance_data['variance'].astype(float)
+    print(the_variance_data)
+    sns.jointplot(data=the_variance_data, x='mse', y='variance', hue='type')
+    plt.tight_layout()
+    plt.savefig(f"{PLOT_PATH}/sns-mse/variance_{dataset}_{technique}.png")
+    plt.close('all')
+
+
+def create_variance_technique_change_plot(mse_data, dataset, reps):
+    techniques = ['Genetic', 'Greedy', 'Sim. Annealing']
+    the_variance_data = pd.DataFrame(columns=['mse', 'variance', 'type', 'technique'])
+    for technique in techniques:
+        sub_mse_data = mse_data[(mse_data['dataset'] == dataset) & (mse_data['technique'] == technique)]
+        for rep in range(reps):
+            row = sub_mse_data.iloc[rep]
+            gram_pre = row['pre_gram']
+            gram_post = row['post_gram']
+            var_pre = np.var(gram_pre[np.triu_indices(gram_pre.shape[0], k=1)]).item()
+            var_post = np.var(gram_post[np.triu_indices(gram_post.shape[0], k=1)]).item()
+            assert var_pre >= 0 and var_post >= 0
+            for i in range(10):
+                the_variance_data.loc[len(the_variance_data)] = {'technique': technique, 'mse': row['mse_pre'], 'variance': var_pre, 'type': 'pre'}
+                the_variance_data.loc[len(the_variance_data)] = {'technique': technique, 'mse': row['mse_post'], 'variance': var_post, 'type': 'post'}
+        the_variance_data['type'] = the_variance_data['type'].astype('category')
+        the_variance_data['mse'] = the_variance_data['mse'].astype(float)
+        the_variance_data['variance'] = the_variance_data['variance'].astype(float)
+    print(the_variance_data)
+    # generate plot
+    sns.relplot(data=the_variance_data, x='mse', y='variance', hue='type', style='technique')
+    plt.tight_layout()
+    plt.savefig(f"{PLOT_PATH}/sns-mse/variance_{dataset}.png")
+    plt.close('all')
+
+
+def emulate_shots(p, shots):
+    assert 0 <= p <= 1
+    counts = 0
+    for _ in range(shots):
+        if np.random.uniform() < p:
+            counts += 1
+    return counts / shots
+
+
+def approximate_gram(gram, shots):
+    gram = gram.copy()
+    for i in range(gram.shape[0]):
+        for j in range(gram.shape[1]):
+            gram[i][j] = emulate_shots(gram[i][j], shots)
+    return gram
+
+
+def create_variance_technique_approximated_change_plot(mse_data, dataset, y_train, y_test, reps, shots):
+    techniques = ['Genetic', 'Greedy', 'Sim. Annealing']
+    the_variance_data = pd.DataFrame(columns=['mse', 'variance', 'type', 'technique'])
+    for technique in techniques:
+        sub_mse_data = mse_data[(mse_data['dataset'] == dataset) & (mse_data['technique'] == technique)]
+        for rep in range(reps):
+            print(f"Processing {technique=} {rep=}")
+            row = sub_mse_data.iloc[rep]
+            gram_pre = approximate_gram(row['pre_gram'], shots)
+            gram_post = approximate_gram(row['post_gram'], shots)
+            gram_pre_test = approximate_gram(row['pre_gram_test'], shots)
+            gram_post_test = approximate_gram(row['post_gram_test'], shots)
+            var_pre = np.var(gram_pre[np.triu_indices(gram_pre.shape[0], k=1)]).item()
+            var_post = np.var(gram_post[np.triu_indices(gram_post.shape[0], k=1)]).item()
+            mse_pre = estimate_mse_from_gram(gram_pre, gram_pre_test, y_train, y_test)
+            mse_post = estimate_mse_from_gram(gram_post, gram_post_test, y_train, y_test)
+            assert var_pre >= 0 and var_post >= 0
+            for i in range(10):
+                the_variance_data.loc[len(the_variance_data)] = {'technique': technique, 'mse': mse_pre, 'variance': var_pre, 'type': 'pre'}
+                the_variance_data.loc[len(the_variance_data)] = {'technique': technique, 'mse': mse_post, 'variance': var_post, 'type': 'post'}
+        the_variance_data['type'] = the_variance_data['type'].astype('category')
+        the_variance_data['mse'] = the_variance_data['mse'].astype(float)
+        the_variance_data['variance'] = the_variance_data['variance'].astype(float)
+    print(the_variance_data)
+    # generate plot
+    sns.relplot(data=the_variance_data, x='mse', y='variance', hue='type', style='technique')
+    plt.tight_layout()
+    plt.savefig(f"{PLOT_PATH}/sns-mse/variance_{dataset}_{shots}.png")
+    plt.close('all')
+
+
+def create_variance_technique_approximated_all_change_plot(mse_data, dataset, y_train, y_test, reps):
+    techniques = ['Genetic', 'Greedy', 'Sim. Annealing']
+    the_variance_data = pd.DataFrame(columns=['mse', 'variance', 'type', 'technique', 'shots'])
+    # non approximated
+    for technique in techniques:
+        sub_mse_data = mse_data[(mse_data['dataset'] == dataset) & (mse_data['technique'] == technique)]
+        for rep in range(reps):
+            row = sub_mse_data.iloc[rep]
+            gram_pre = row['pre_gram']
+            gram_post = row['post_gram']
+            var_pre = np.var(gram_pre[np.triu_indices(gram_pre.shape[0], k=1)]).item()
+            var_post = np.var(gram_post[np.triu_indices(gram_post.shape[0], k=1)]).item()
+            assert var_pre >= 0 and var_post >= 0
+            for i in range(10):
+                the_variance_data.loc[len(the_variance_data)] = {'shots': 0, 'technique': technique, 'mse': row['mse_pre'], 'variance': var_pre, 'type': 'pre'}
+                the_variance_data.loc[len(the_variance_data)] = {'shots': 0, 'technique': technique, 'mse': row['mse_post'], 'variance': var_post, 'type': 'post'}
+        the_variance_data['type'] = the_variance_data['type'].astype('category')
+        the_variance_data['mse'] = the_variance_data['mse'].astype(float)
+        the_variance_data['variance'] = the_variance_data['variance'].astype(float)
+    # approximated
+    for shots in [16, 128, 1024]:
+        for technique in techniques:
+            sub_mse_data = mse_data[(mse_data['dataset'] == dataset) & (mse_data['technique'] == technique)]
+            for rep in range(reps):
+                print(f"Processing {technique=} {rep=}")
+                row = sub_mse_data.iloc[rep]
+                gram_pre = approximate_gram(row['pre_gram'], shots)
+                gram_post = approximate_gram(row['post_gram'], shots)
+                gram_pre_test = approximate_gram(row['pre_gram_test'], shots)
+                gram_post_test = approximate_gram(row['post_gram_test'], shots)
+                var_pre = np.var(gram_pre[np.triu_indices(gram_pre.shape[0], k=1)]).item()
+                var_post = np.var(gram_post[np.triu_indices(gram_post.shape[0], k=1)]).item()
+                mse_pre = estimate_mse_from_gram(gram_pre, gram_pre_test, y_train, y_test)
+                mse_post = estimate_mse_from_gram(gram_post, gram_post_test, y_train, y_test)
+                assert var_pre >= 0 and var_post >= 0
+                for i in range(10):
+                    the_variance_data.loc[len(the_variance_data)] = {'shots': shots, 'technique': technique, 'mse': mse_pre, 'variance': var_pre, 'type': 'pre'}
+                    the_variance_data.loc[len(the_variance_data)] = {'shots': shots, 'technique': technique, 'mse': mse_post, 'variance': var_post, 'type': 'post'}
+            the_variance_data['type'] = the_variance_data['type'].astype('category')
+            the_variance_data['mse'] = the_variance_data['mse'].astype(float)
+            the_variance_data['variance'] = the_variance_data['variance'].astype(float)
+    return the_variance_data
+
+
+def plot_variance_technique_approximated_all_change_plot(variance_data, dataset):
+    sns.relplot(data=variance_data, x='mse', y='variance', hue='shots', style='type')
+    plt.tight_layout()
+    plt.savefig(f"{PLOT_PATH}/sns-mse/variance_{dataset}.png")
+    plt.close('all')
+
+
+def create_variance_change_plot(mse_data, reps):
+    for dataset in ['XS', 'XT', 'XM', 'OC', 'RE', 'FM', 'MB']:
+        create_variance_technique_change_plot(mse_data, dataset, reps)
+
+
+def create_variance_shots_change_plot(mse_data, dataset, reps):
+    for dataset in ['XS', 'XT', 'XM', 'OC', 'RE', 'FM', 'MB']:
+        create_variance_technique_change_plot(mse_data, dataset, reps)
+
+
+
+
+# # the_mse_data = load_mse_data(10)
+# create_increment_performances_plot(the_mse_data)
+# # create_eigenvalue_change_plot(the_mse_data, 10)
+# y_train = np.load(f"{DATASET_PATH}/fish_market/y_train.npy")
+# y_test = np.load(f"{DATASET_PATH}/fish_market/y_test.npy")
+# # create_variance_technique_approximated_change_plot(the_mse_data, 'FM', y_train, y_test, 10, 16)
+# # create_variance_technique_approximated_change_plot(the_mse_data, 'FM', y_train, y_test, 10, 128)
+# # create_variance_technique_approximated_change_plot(the_mse_data, 'FM', y_train, y_test, 10, 1024)
+# # create_variance_technique_change_plot(the_mse_data, 'FM', 10)
+# the_variance_data = create_variance_technique_approximated_all_change_plot(the_mse_data, 'FM', y_train, y_test, 10)
+# plot_variance_technique_approximated_all_change_plot(the_variance_data, 'FM')
+# # create_variance_change_plot(the_mse_data, 10)
 
 # =====================================================================================
 # 4. GENERATE DETAILED PLOTS ==========================================================
@@ -452,7 +771,6 @@ def plot_mse(the_plot_path, the_mse_data, dataset_name, title=None):
     if not mse_items:
         print(f"Warning: {dataset_name=} has not be processed at all")
         return
-
     # plot graph
     plt.figure()
     plt.violinplot([v for k, v in mse_items], range(len(mse_items)),
@@ -460,7 +778,8 @@ def plot_mse(the_plot_path, the_mse_data, dataset_name, title=None):
     plt.ylabel("MSE (lower is better)")
     plt.xticks(range(len(mse_items)), [k for k, v in mse_items], rotation=45)
     plt.subplots_adjust(bottom=0.25)
-    plt.title(f"MSE for {dataset_name=}" if title is None else title)
+    plt.xlabel("Approach")
+    plt.ylabel("MSE (lower is better)")
     plt.savefig(f"{the_plot_path}/{dataset_name}.png")
     plt.close()
 
@@ -598,7 +917,53 @@ def plot_mse_eigvals(the_plot_path, the_mse_data, the_eigvals_data, dataset_name
     plt.close()
 
 
-def generate_plots(intermediate_path, plot_path, repetitions, allow_partial_fold=True):
+# def generate_plots(intermediate_path, plot_path, repetitions, allow_partial_fold=True):
+#
+#     DATASETS = ["fish_market", "life_expectancy", "medical_bill", "ols_cancer", "real_estate",
+#                 "function_approximation_meyer_wavelet", "function_approximation_sin_squared",
+#                 "function_approximation_step"]
+#     TECHNIQUES = ['random_kernel', 'scrambled_kernel-4', 'scrambled_kernel-3', 'combinatorial_sa_kernel',
+#                   'combinatorial_genetic_kernel', 'combinatorial_greedy_kernel']
+#
+#     for dataset in DATASETS:
+#         mse_data = {technique: [] for technique in TECHNIQUES}
+#         eigvals_data = {technique: [] for technique in TECHNIQUES}
+#         coeffs_data = {technique: [] for technique in TECHNIQUES}
+#
+#         # re-load data from folders
+#         for technique in TECHNIQUES:
+#             n = 0
+#             for rep in range(repetitions):
+#                 if Path(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy").exists():
+#                     # load mse
+#                     mse = np.load(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy")
+#                     mse_data[technique].append(mse)
+#                     # load training gram matrix & calculate eigvals and variance
+#                     gram_train = np.load(f"{intermediate_path}/{dataset}/{technique}/{rep}/gram_train.npy")
+#                     train_eigs = np.linalg.eigvals(gram_train)
+#                     train_coeffs = gram_train[np.triu_indices(gram_train.shape[0], k=1)]
+#                     eigvals_data[technique].append(train_eigs)
+#                     coeffs_data[technique].append(train_coeffs)
+#                     n = gram_train.shape[0]
+#
+#                 elif allow_partial_fold:
+#                     print(f"Warning: dataset {dataset} has missing {technique=} {rep=}")
+#                 else:
+#                     assert False, f"Warning: dataset {dataset} has missing {technique=} {rep=}"
+#             mse_data[technique] = np.array(mse_data[technique])
+#             mse_data[technique][mse_data[technique] == np.inf] = 2*n
+#
+#         plot_mse(f"{plot_path}/mse", mse_data, dataset_name=dataset, title=f"MSE {dataset}")
+#         # plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=dataset, title=f"EIGVALS {dataset}")
+#         # plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=f"{dataset}_zoom", title=f"EIGVALS {dataset}", ylim=(5, 25))
+#         # plot_coefficients(f"{plot_path}/variance", coeffs_data, dataset_name=dataset, title=f"VARIANCE {dataset}")
+#         # plot_mse_variance(f"{plot_path}/mse-variance", mse_data, coeffs_data, dataset_name=dataset)
+#         # plot_mse_eigvals(f"{plot_path}/mse-eigenvalue", mse_data, eigvals_data, dataset_name=dataset)
+
+
+def new_generate_plots(intermediate_path, plot_path, repetitions, allow_partial_fold=True):
+
+    the_mse_df = pd.DataFrame(columns=['technique', 'mse', 'dataset'])
 
     DATASETS = ["fish_market", "life_expectancy", "medical_bill", "ols_cancer", "real_estate",
                 "function_approximation_meyer_wavelet", "function_approximation_sin_squared",
@@ -607,40 +972,69 @@ def generate_plots(intermediate_path, plot_path, repetitions, allow_partial_fold
                   'combinatorial_genetic_kernel', 'combinatorial_greedy_kernel']
 
     for dataset in DATASETS:
-        mse_data = {technique: [] for technique in TECHNIQUES}
-        eigvals_data = {technique: [] for technique in TECHNIQUES}
-        coeffs_data = {technique: [] for technique in TECHNIQUES}
+         for technique in TECHNIQUES:
+             for rep in range(repetitions):
+                 if Path(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy").exists():
+                     # load mse
+                     mse = np.load(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy")
+                     if mse >= np.inf: mse = 5.0
+                     assert mse >= 0
+                     the_mse_df.loc[len(the_mse_df)] = {'mse': float(mse), 'technique': str(technique), 'dataset': str(dataset)}
 
-        # re-load data from folders
-        for technique in TECHNIQUES:
-            n = 0
-            for rep in range(repetitions):
-                if Path(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy").exists():
-                    # load mse
-                    mse = np.load(f"{intermediate_path}/{dataset}/{technique}/{rep}/mse.npy")
-                    mse_data[technique].append(mse)
-                    # load training gram matrix & calculate eigvals and variance
-                    gram_train = np.load(f"{intermediate_path}/{dataset}/{technique}/{rep}/gram_train.npy")
-                    train_eigs = np.linalg.eigvals(gram_train)
-                    train_coeffs = gram_train[np.triu_indices(gram_train.shape[0], k=1)]
-                    eigvals_data[technique].append(train_eigs)
-                    coeffs_data[technique].append(train_coeffs)
-                    n = gram_train.shape[0]
+    the_mse_df['dataset'] = the_mse_df['dataset'].replace(
+        {
+            "fish_market": 'FM',
+            "function_approximation_meyer_wavelet": 'XM',
+            "function_approximation_sin_squared": 'XS',
+            "function_approximation_step": 'XT',
+            "life_expectancy": 'LE',
+            "medical_bill": 'MB',
+            "ols_cancer": 'OC',
+            "real_estate": 'RE'
+        }
+    )
+    the_mse_df['dataset'] = the_mse_df['dataset'].astype('category')
+    the_mse_df_technique = the_mse_df['technique'].copy()
+    the_mse_df['technique'] = the_mse_df['technique'].replace(
+        {
+            'combinatorial_genetic_kernel': 'C',
+            'combinatorial_sa_kernel': 'C',
+            'combinatorial_greedy_kernel': 'C',
+            'scrambled_kernel-4': 'HE3',
+            'scrambled_kernel-3': 'HE4',
+            'random_kernel': 'R'
+        }
+    )
+    the_mse_df['technique'] = the_mse_df['technique'].astype('category')
+    sns.barplot(data=the_mse_df, x="dataset", y="mse", hue="technique",
+                order=['OC', 'RE', 'FM', 'MB', 'LE', 'XM', 'XS', 'XT'],
+                hue_order=['C', 'HE3', 'HE4', 'R']) # , order=['HE4', 'HE3', 'R', 'C'])
+    plt.xlabel("Dataset")
+    plt.ylabel("MSE (lower is better)")
+    plt.ylim((0, 0.50))
+    plt.savefig(f"{plot_path}/mse_approaches.png")
+    plt.close()
 
-                elif allow_partial_fold:
-                    print(f"Warning: dataset {dataset} has missing {technique=} {rep=}")
-                else:
-                    assert False, f"Warning: dataset {dataset} has missing {technique=} {rep=}"
-            mse_data[technique] = np.array(mse_data[technique])
-            mse_data[technique][mse_data[technique] == np.inf] = 2*n
+    the_mse_df['technique'] = the_mse_df_technique.replace(
+        {
+            'combinatorial_genetic_kernel': 'CGEN',
+            'combinatorial_sa_kernel': 'CSA',
+            'combinatorial_greedy_kernel': 'CGLS',
+            'scrambled_kernel-4': 'HE3',
+            'scrambled_kernel-3': 'HE4',
+            'random_kernel': 'R'
+        }
+    )
+    for dataset in ['OC', 'RE', 'FM', 'MB', 'LE', 'XM', 'XS', 'XT']:
+        sns.barplot(data=the_mse_df[the_mse_df['dataset'] == dataset], x="technique", y="mse",
+                    order=['CGEN', 'CSA', 'CGLS', 'HE3', 'HE4', 'R'],
+                    capsize=0.4, linewidth=3)
+        plt.xlabel("Technique")
+        plt.ylabel("MSE (lower is better)")
+        # plt.ylim((0, 0.50))
+        plt.savefig(f"{plot_path}/mse_{dataset}.png")
+        plt.close()
 
-        plot_mse(f"{plot_path}/mse", mse_data, dataset_name=dataset, title=f"MSE {dataset}")
-        plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=dataset, title=f"EIGVALS {dataset}")
-        plot_eigvals(f"{plot_path}/eigenvalue", eigvals_data, dataset_name=f"{dataset}_zoom", title=f"EIGVALS {dataset}", ylim=(5, 25))
-        plot_coefficients(f"{plot_path}/variance", coeffs_data, dataset_name=dataset, title=f"VARIANCE {dataset}")
-        plot_mse_variance(f"{plot_path}/mse-variance", mse_data, coeffs_data, dataset_name=dataset)
-        plot_mse_eigvals(f"{plot_path}/mse-eigenvalue", mse_data, eigvals_data, dataset_name=dataset)
 
-
-# generate_plots(INTERMEDIATE_PATH, PLOT_PATH, repetitions=10)
+new_generate_plots(INTERMEDIATE_PATH, PLOT_PATH, repetitions=10)
 
