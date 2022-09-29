@@ -49,7 +49,7 @@ class CombinatorialKernelGenetic:
             self.current_population = self.current_population[:self.num_breeding_parents]
             # generate all other items
             for i in range(self.num_breeding_parents, self.num_population):
-                print(f"Iteration {i} best solution energy={self.current_population[0][1]}")
+                print(f"Epoch {epoch} Iteration {i} best solution energy={self.current_population[0][1]}")
                 # crossover (1 point)
                 one, two = np.random.choice(self.num_breeding_parents, 2, replace=False)
                 split = np.random.randint(2 * self.n_layers * self.n_qubits)

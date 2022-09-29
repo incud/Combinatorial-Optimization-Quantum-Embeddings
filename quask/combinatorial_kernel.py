@@ -68,3 +68,5 @@ def CombinatorialKernel(n_qubits, n_layers):
         return combinatorial_kernel()
 
     return jax.jit(combinatorial_kernel_wrapper)
+
+
