@@ -48,9 +48,9 @@ def get_next_seed():
     return int(ret)
 
 
-DATASET_PATH = "paper-results-2/datasets"
-INTERMEDIATE_PATH = "paper-results-2/intermediate"
-PLOT_PATH = "paper-results-2/plots"
+DATASET_PATH = "datasets"
+INTERMEDIATE_PATH = "intermediate"
+PLOT_PATH = "plots"
 np.save(f"{INTERMEDIATE_PATH}/SIMULATION_SEED.npy", SIMULATION_SEED)
 REFRESH_DATASET = False
 REFRESH_INTERMEDIATE = False
@@ -529,6 +529,14 @@ def load_mse_data(reps):
     return mse_data
 
 
+def print_table_data(mse_data):
+    table_data = mse_data.drop(columns=['pre_gram', 'post_gram', 'pre_gram_test', 'post_gram_test'], axis=1,
+                             inplace=False)
+    table_data = table_data.groupby(['dataset', 'technique']).agg({'mse_change': 'max', 'mse_pre': 'min', 'mse_post': 'min'})[
+        ['mse_change', 'mse_pre', 'mse_post']].reset_index()
+    print(table_data.to_string())
+
+
 def create_increment_performances_plot(mse_data):
 
     order = ['XS', 'XT', 'XM', 'OC', 'RE', 'FM', 'MB', 'LE']
@@ -582,7 +590,7 @@ def create_eigenvalue_technique_comparison(mse_data, dataset, reps):
 
 def create_eigenvalue_change_plot(mse_data, reps):
     for dataset in ['XS', 'XT', 'XM', 'OC', 'RE', 'FM', 'MB']:
-        create_eigenvalue_technique_comparison(mse_data, 'XM', reps)
+        create_eigenvalue_technique_comparison(mse_data, dataset, reps)
         plt.tight_layout()
         plt.savefig(f"{PLOT_PATH}/sns-mse/eigvals_{dataset}.png")
         plt.close('all')
@@ -747,7 +755,8 @@ def create_variance_shots_change_plot(mse_data, dataset, reps):
 
 
 
-# # the_mse_data = load_mse_data(10)
+the_mse_data = load_mse_data(10)
+print_table_data(the_mse_data)
 # create_increment_performances_plot(the_mse_data)
 # # create_eigenvalue_change_plot(the_mse_data, 10)
 # y_train = np.load(f"{DATASET_PATH}/fish_market/y_train.npy")
